@@ -1,0 +1,9 @@
+{
+  "engine_id": "basic-pitch",
+  "engine_version": "0.4.0",
+  "license": "Apache-2.0",
+  "model_id": "spotify/basic-pitch-icassp-2022-onnx",
+  "model_revision": "basic-pitch-0.4.0:nmp.onnx",
+  "model_sha256": "2c3c1d144bfa61ad236e92e169c13535c880469a12a047d4e73451f2c059a0ec",
+  "wheel_sha256": "738adb503aae7fdfc7d1e1511aa0ce35052315f260a19531ef4c356708425db0"
+}

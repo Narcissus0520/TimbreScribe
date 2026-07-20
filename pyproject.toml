@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "timbrescribe"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local-first desktop music transcription workbench"
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
@@ -38,6 +38,7 @@ timbrescribe = "timbrescribe.__main__:main"
 
 [project.scripts]
 timbrescribe-mock-worker = "timbrescribe.workers.mock:main"
+timbrescribe-basic-pitch-worker = "timbrescribe.workers.basic_pitch:main"
 
 [dependency-groups]
 dev = [
@@ -47,6 +48,14 @@ dev = [
   "pytest-cov>=6,<8",
   "pytest-qt>=4.4,<5",
   "ruff>=0.11,<1",
+]
+basic-pitch = [
+  "basic-pitch[onnx]==0.4.0",
+]
+
+[tool.uv]
+exclude-dependencies = [
+  { package = { name = "basic-pitch", version = "0.4.0" }, dependencies = ["coremltools", "tensorflow", "tensorflow-macos", "tflite-runtime"] },
 ]
 
 [tool.hatch.build.targets.wheel]

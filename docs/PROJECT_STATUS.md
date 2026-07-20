@@ -2,79 +2,66 @@
 
 ## Current milestone
 
-Phase 1 — Media Import, Playback, and Worker Job Foundation (`v0.2.0`).
+Phase 2 — Basic Pitch Baseline and Raw Piano Roll (`v0.3.0`).
 
 ## Current application version
 
-`0.2.0` (pre-alpha, unreleased).
+`0.3.0` (pre-alpha, unreleased).
 
-## Completed baseline
+## Merged baseline
 
-- Repository operating contract preserved as the source of truth.
-- Local and remote empty-state inspection completed.
-- Python 3.11.9 x64, Git, GitHub CLI, and GitHub authentication verified.
-- `uv` 0.11.29 installed from the verified WinGet package.
-- Repository metadata, Apache-2.0 license, exact `uv.lock`, and pinned Windows CI Actions created.
-- Layered domain/application/infrastructure/UI composition established with strict dependency direction.
-- Configuration paths, rotating local logging, structured errors, and background job state machine implemented.
-- Standalone deterministic Mock/Test worker implemented with protocol-v1 JSONL, stdout/stderr separation, progress, warning, failure, result artifacts, and cooperative cancellation.
-- Immutable Mock raw events converted to a one-part score using exact rational beat time.
-- Minimal deterministic MusicXML 4.0 generation, structural validation, committed golden fixture, and visible Qt score preview implemented.
-- Atomic MusicXML and Standard MIDI File exports implemented and verified with Unicode/spaced paths.
-- PySide6 main window, scenario controls, progress, cancellation, diagnostics, score/XML tabs, inspector, and export actions implemented.
-- Unit, contract, real-subprocess integration, and GUI suites implemented; all 49 Phase 0 tests passed locally.
-- Architecture/testing guides, model-license state, direct dependency notices, and all ten initial ADRs created.
-- GitHub Actions Windows quality gate passed for Phase 0 PR #1.
-- Phase 0 PR #1 squash-merged to `main` as `c046387`.
+- Phase 0 deterministic Mock/Test score vertical slice merged by PR #1 as `c046387`.
+- Phase 1 media import/playback/decode/cache/waveform foundation merged by PR #2 as `3c5df334febbde2a4a1c6b02f862cfdde24c4c34`.
+- Python 3.11, uv, layered domain/application/infrastructure/UI boundaries, Ruff, strict Mypy, pytest coverage gate, pinned Windows Actions, MusicXML/MIDI export, and versioned JSONL worker protocol remain established.
 
 ## Completed in this milestone
 
-- Exact shared LGPL FFmpeg 8.1 reference selected with archive, executable hashes, version, configure flags, source links, and verification script.
-- Bundled/configured/`PATH` FFmpeg discovery implemented; non-reference builds are visibly identified rather than silently trusted.
-- Asynchronous media probe and source hashing implemented with bounded subprocess execution and shutdown cancellation.
-- WAV, MP3, and MP4 picker/drag-and-drop import implemented with Unicode/spaced paths, stream metadata, audio-stream selection, and analysis range.
-- Immutable source-media domain model implemented; original path/hash evidence is preserved.
-- Cancelable QProcess decode to mono 44.1 kHz 16-bit PCM WAV implemented with progress and schema-v1 metadata.
-- Content-addressed cache key covers source hash, stream, range, output settings, and pipeline version; cleanup owns derived files only.
-- Qt Multimedia source playback, play/pause/stop/seek, position/duration reporting, and asynchronous waveform rendering implemented.
-- Atomic recent-media settings and actionable missing/unsupported media errors implemented.
-- Generated WAV/MP3/MP4/video-only fixtures cover probing, source hash preservation, cache hit, cancellation, and GUI responsiveness.
-- Windows CI now installs and verifies the exact FFmpeg reference before running tests.
+- Audited Spotify Basic Pitch 0.4.0 and selected its bundled ONNX model as the CPU baseline.
+- Recorded engine wheel SHA-256 `738adb503aae7fdfc7d1e1511aa0ce35052315f260a19531ef4c356708425db0` and model SHA-256 `2c3c1d144bfa61ad236e92e169c13535c880469a12a047d4e73451f2c059a0ec`.
+- Added an optional `uv` developer group that installs ONNX Runtime CPU and excludes unused TensorFlow/CoreML/TFLite runtime families.
+- Added a setup/verification script that checks exact engine/model identity and refuses unexpected runtime families.
+- Implemented engine/model availability detection without importing inference code into the GUI.
+- Implemented a persistent isolated Basic Pitch worker that preloads once, reuses the model, reserves stdout for protocol JSONL, and captures settings/source/model/runtime provenance.
+- Added a Qt worker adapter with capability negotiation, job/result-path validation, persistent reuse, cooperative cancellation, bounded terminate/kill, and no result promotion after cancellation.
+- Normalized Basic Pitch events into immutable raw notes without inventing instrument, program, channel, or separation metadata.
+- Added an explicit CPU settings panel and honest UI language: instrument-agnostic, no instrument separation, best on a single instrument.
+- Added a physical-time piano roll, non-destructive confidence filtering, and atomic raw MIDI export.
+- Added model-free protocol/worker/controller/GUI tests, a generated-tone opt-in real-model test, a manual model-smoke workflow, and a reproducible CPU benchmark.
+- Added ADR 0012 and updated architecture, testing, model-license, third-party, README, and changelog evidence.
 
 ## In progress
 
-- Completing final Phase 1 PR review and merge after the documented CI rerun.
+- Phase 2 PR #3 final review and merge after successful Windows CI.
 
 ## Known issues / blockers
 
-- No Phase 1 code blocker is currently known.
-- The current score view is the explicitly allowed Phase 0 Qt painter adapter, not professional engraving. Pinned local Verovio/QWebEngine assets and round-trip validation remain future work.
-- The reference FFmpeg build is installed for development but not committed or bundled; packaged redistribution remains a release-compliance gate.
-- Source playback selection loop and speed controls are deferred to playback-polish Phase 6; Phase 1 covers required basic transport and seek.
-- Windows packaging and full transitive third-party manifest verification are deferred to the release-hardening milestone.
+- No Phase 2 code blocker is currently known.
+- Basic Pitch is a baseline for note events, not instrument separation or a finished editable score.
+- The optional dependency resolution uses `uv` scoped exclusions and is not suitable as a public pip extra; installer packaging remains a later compliance task.
+- Upstream `resampy` 0.4.2 imports the removed `pkg_resources.resource_filename`; the isolated model process supplies only that operation through an `importlib` compatibility module, with model tests guarding it until upstream is updated.
+- Basic Pitch inference is not cooperatively interruptible while inside the upstream call; cancellation safely discards and terminates the isolated worker when needed.
+- Professional Verovio rendering, editable score construction from Basic Pitch raw notes, project persistence, playback polish, packaging, and full transitive notices remain later ordered milestones.
 
 ## Verification commands and results
 
 | Command | Result |
 |---|---|
-| `py -3.11 --version` | Passed: Python 3.11.9 x64 |
-| `uv --version` | Passed: uv 0.11.29 |
-| `tools/setup_ffmpeg.ps1` end-to-end | Passed in 49 seconds: download, archive/executable SHA-256, version, configure flags, and sibling pair verified |
-| `uv sync --frozen --group dev` | Passed: 51 locked packages checked |
+| `tools/setup_ffmpeg.ps1` | Passed: exact shared LGPL FFmpeg 8.1 archive/executables/version/configuration verified |
+| `tools/setup_basic_pitch.ps1 -VerifyOnly` | Passed: Basic Pitch 0.4.0, ONNX Runtime 1.27.0 CPU, exact model SHA; no TensorFlow/CoreML/TFLite detected |
 | `uv run ruff format --check .` | Passed |
 | `uv run ruff check .` | Passed |
-| `uv run mypy src/timbrescribe` | Passed: 51 source files, strict mode |
-| `uv run pytest -m "not model and not packaging"` | Passed: 92 tests; 80% overall branch-aware coverage; 75% regression floor enforced |
-| `uv run pip-audit` | Passed: no known vulnerabilities in auditable locked dependencies; local project package skipped as expected |
-| managed `python -m timbrescribe` launch smoke | Passed: process remained healthy for 3 seconds before intentional test termination |
-| native Windows hidden-window visual capture | Passed: Chinese/English text, treble clef, four Mock notes, inspector, diagnostics, and progress rendered correctly |
-| Phase 1 native media visual/playback capture | Passed: verified MP4 metadata, 789 ms playback, 992-point waveform, enabled controls, diagnostics, and 100% job progress rendered correctly |
-| GitHub Actions `Windows quality gates` | Passed in 55 seconds on PR #1 ([run 29763442272](https://github.com/Narcissus0520/TimbreScribe/actions/runs/29763442272)) |
-| Phase 1 GitHub Actions `Windows quality gates` | Passed on PR #2: verified FFmpeg install, format, lint, strict typing, and model-free tests ([run 29766473383](https://github.com/Narcissus0520/TimbreScribe/actions/runs/29766473383)) |
+| `uv run mypy src/timbrescribe` | Passed: 60 source files, strict mode |
+| `uv run pytest -m "not model and not packaging"` | Passed: 106 tests; 78.20% branch-aware coverage; separately repeated with model packages absent; 75% floor enforced |
+| real-model opt-in pytest | Passed: two jobs in one responsive Qt process; both reported `model_load_count == 1` |
+| persistent worker subprocess smoke | Passed: first inference 1.882 s, second 0.034 s, one model load, protocol-only stdout |
+| CPU benchmark on 2.0 s 440 Hz WAV | Passed: model load 0.115 s; cold inference 1.284 s; warm inference 0.035 s; one note; peak working set 233,213,952 bytes |
+| native Windows end-to-end visual smoke | Passed: media import/decode, one raw note, piano-roll view, settings/provenance diagnostics, and raw MIDI export; inference 1.273 s |
+| default and optional-environment `uv run pip-audit` | Passed: no known vulnerabilities; local project skipped because it is not on PyPI |
+| GitHub Actions `Windows quality gates` | Passed in 1m03s on PR #3: exact FFmpeg setup, format, lint, strict typing, and 106 model-free tests ([run 29771250522](https://github.com/Narcissus0520/TimbreScribe/actions/runs/29771250522)) |
 
 ## Next recommended task
 
-Complete Phase 1 PR review/merge, then begin Phase 2 Basic Pitch baseline and raw piano-roll work without changing the preserved Mock/raw-event path.
+Complete PR #3 review/merge, then begin Phase 3 persistent project data and deterministic editing without mutating raw evidence.
 
 ## Last updated date
 
