@@ -6,6 +6,13 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Added
 
+- Stable-ID editable piano roll with multi-selection, add/delete/move/resize, snap, velocity, part/staff/voice inspector edits, raw-evidence overlay, keyboard shortcuts, and selection loop controls.
+- Deterministic snapshot command stack with composite bulk edits, reliable undo/redo, content-aware dirty state, and monotonic version tokens that reject stale background results.
+- Exact physical-time edited-note layer that preserves immutable raw events and re-derives notation without rerunning inference.
+- Independently versioned `.timbrescribe` project archives with deterministic hashes, atomic replacement, schema migrations, bounded in-memory loading, and derived MusicXML/MIDI consistency checks.
+- Asynchronous primary save/load, separate timestamped autosave recovery copies, recovery offer, and Save/Discard/Cancel unsaved-change handling.
+- Source-backed visual score synchronization plus a deterministic score-only preview clock and selection looping; audio synthesis refinement remains scheduled for Phase 6.
+- Reproducible project archive save/load benchmark with platform, runtime, size, timing, and peak Python memory output.
 - Reviewed tempo/key suggestions and manual meter, instrument, concert-pitch, quantization, triplet, and confidence controls.
 - Exact rational notation pipeline with repeated-note merging, staff/voice allocation, rests, cross-bar ties, pitch spelling, range diagnostics, and immutable raw provenance links.
 - B-flat, E-flat, and F transposing-instrument profiles with MusicXML `<transpose>` metadata and sounding-pitch MIDI export.
@@ -46,7 +53,11 @@ All notable changes to TimbreScribe will be documented in this file. The project
 - Bridged Qt Multimedia 64-bit time signals explicitly for reliable PySide6 signal delivery.
 - Prevented successful FFmpeg exits without an artifact and process-start errors from promoting invalid cache entries.
 
-## [0.4.0] - Unreleased
+## [0.5.0] - Unreleased
+
+Phase 4 adds non-destructive direct editing, command-based undo/redo, synchronized score navigation, and secure versioned project save/load/autosave/recovery.
+
+## [0.4.0] - 2026-07-21
 
 Phase 3 adds reviewed deterministic notation, transposing-instrument semantics, local professional rendering, and MusicXML/MXL/MIDI/SVG/PNG/vector-PDF export. External MuseScore validation remains pending where MuseScore 4 is not installed.
 

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from timbrescribe.application.services.phase_zero import ScorePresentation
 from timbrescribe.domain.notation import NotationSettings, build_notation
-from timbrescribe.domain.score import ScoreProject
+from timbrescribe.domain.score import ScoreDocument, ScoreProject
 from timbrescribe.domain.transcription import RawTranscription
 from timbrescribe.infrastructure.exporting import MidiExporter, MusicXmlExporter, MxlExporter
 from timbrescribe.infrastructure.rendering import ScoreImageExporter
@@ -36,7 +36,23 @@ class NotationService:
         project = ScoreProject(raw, draft.score)
         document = self._musicxml.render(draft.score)
         diagnostics = tuple(f"{item.code}: {item.message}" for item in draft.diagnostics)
-        return ScorePresentation(project, document, diagnostics)
+        return ScorePresentation(project, document, diagnostics, settings)
+
+    def present_score(
+        self,
+        raw: RawTranscription,
+        score: ScoreDocument,
+        settings: NotationSettings,
+        diagnostics: tuple[str, ...] = (),
+    ) -> ScorePresentation:
+        """Render one immutable edited snapshot without invoking model inference."""
+
+        return ScorePresentation(
+            ScoreProject(raw, score),
+            self._musicxml.render(score),
+            diagnostics,
+            settings,
+        )
 
     def export_mxl(self, presentation: ScorePresentation, destination: Path) -> Path:
         return self._mxl.export(presentation.project.score, destination)

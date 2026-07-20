@@ -224,16 +224,21 @@ def _score_notes(
                 part_id="part-1",
                 staff=allocated_event.staff,
                 voice=allocated_event.voice,
-                written_pitch=_spell_pitch(written_midi, prefer_flats=key_fifths < 0),
+                written_pitch=spell_pitch(written_midi, prefer_flats=key_fifths < 0),
                 sounding_pitch=event.sounding_pitch,
                 start_beat=event.start_beat,
                 duration_beats=event.duration_beats,
+                velocity=event.velocity,
             )
         )
     return tuple(notes), tuple(diagnostics)
 
 
-def _spell_pitch(midi_pitch: int, *, prefer_flats: bool) -> PitchSpelling:
+def spell_pitch(midi_pitch: int, *, prefer_flats: bool) -> PitchSpelling:
+    """Return a deterministic spelling suitable for editing and notation stages."""
+
+    if not 0 <= midi_pitch <= 127:
+        raise ValueError("MIDI pitch must be in [0, 127]")
     spellings = _FLAT_SPELLINGS if prefer_flats else _SHARP_SPELLINGS
     step, alter = spellings[midi_pitch % 12]
     return PitchSpelling(step, (midi_pitch // 12) - 1, alter)

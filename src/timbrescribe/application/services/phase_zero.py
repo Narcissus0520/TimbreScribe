@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from timbrescribe.application.ports import MidiExportPort, MusicXmlExportPort
 from timbrescribe.domain.score import ScoreBuilder, ScoreProject
 from timbrescribe.domain.transcription import RawTranscription
+
+if TYPE_CHECKING:
+    from timbrescribe.domain.notation import NotationSettings
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +21,7 @@ class ScorePresentation:
     project: ScoreProject
     musicxml: str
     diagnostics: tuple[str, ...] = ()
+    notation_settings: NotationSettings | None = None
 
 
 class PhaseZeroService:

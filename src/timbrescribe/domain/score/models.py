@@ -52,15 +52,20 @@ class ScoreNote:
     tie_start: bool = False
     tie_stop: bool = False
     edited_by_user: bool = False
+    velocity: int = 80
     notations: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not self.id or not self.source_note_ids or not self.part_id:
+        if not self.id or not self.part_id:
             raise ValueError("Score note identity and provenance are required")
+        if not self.source_note_ids and not self.edited_by_user:
+            raise ValueError("Only user-added score notes may omit source note IDs")
         if self.staff < 1 or self.voice < 1:
             raise ValueError("Staff and voice numbers start at one")
         if not 0 <= self.sounding_pitch <= 127:
             raise ValueError("Sounding MIDI pitch must be in [0, 127]")
+        if not 0 <= self.velocity <= 127:
+            raise ValueError("Score velocity must be in [0, 127]")
         if self.start_beat < 0 or self.duration_beats <= 0:
             raise ValueError("Score timing must satisfy start >= 0 and duration > 0")
 

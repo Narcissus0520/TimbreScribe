@@ -34,12 +34,20 @@ uv run --group basic-pitch python benchmarks/basic_pitch_cpu.py path/to/decoded.
 
 The JSON records hardware, Python/engine/runtime/model identity, model hash, input duration/size, settings, cold/warm runtime, detected-note count, and Windows peak working set. Benchmark output belongs outside version control unless a milestone explicitly selects a fixture/result.
 
-## Test layers through Phase 3
+## Project archive benchmark
 
-- Unit/property: source-media invariants, cache keys/cleanup, waveform/playback state, raw/settings/provenance validation, Basic Pitch normalization/error boundaries, exact quantization, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
+```powershell
+uv run python benchmarks/project_archive.py --notes 1000
+```
+
+The JSON reports the application/Python/platform identity, note count, archive size, save/load wall time, peak traced Python memory, and verified round-trip project ID.
+
+## Test layers through Phase 4
+
+- Unit/property: source-media invariants, cache keys/cleanup, waveform/playback/loop state, raw/settings/provenance validation, Basic Pitch normalization/error boundaries, exact quantization, command execute/undo/redo, stale-version rejection, project migrations, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
 - Contract: protocol v1 parsing, Basic Pitch request settings, unknown-field compatibility, incompatible-version errors, stdout JSONL discipline, progress, warning, result, failure, and cancellation.
-- Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, result loading, pinned Verovio 6.2.1 multi-page rendering, and SVG/PNG/vector-PDF export.
-- GUI: offscreen media responsiveness, Mock paths, Basic Pitch persistent-client reuse, confidence-filtered piano roll, reviewed notation controls, Verovio page state, professional exports, raw MIDI export, and forced-cancel no-promotion behavior using `pytest-qt`.
+- Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, result loading, pinned Verovio 6.2.1 multi-page rendering, secure `.timbrescribe` round trips, and SVG/PNG/vector-PDF export.
+- GUI: offscreen media responsiveness, Mock paths, Basic Pitch persistent-client reuse, confidence-filtered raw roll, keyboard/multi-selection editing, inspector commands, undo/redo, save/reopen, stale-result rejection, unsaved-close prompts, reviewed notation controls, Verovio page state, professional exports, raw MIDI export, and forced-cancel no-promotion behavior using `pytest-qt`.
 - Model (opt-in): exact Basic Pitch/ONNX availability, real CPU inference, persistent model reuse, provenance, and Qt responsiveness.
 
 ## Manual smoke test
@@ -62,5 +70,9 @@ Then:
 10. Inspect multiple Verovio pages; exercise previous/next, fit width/page, zoom, and reload.
 11. Export `.mxl`, `.svg`, `.png` at the default DPI, and vector `.pdf` to a Unicode/spaced path.
 12. On a machine with MuseScore 4, confirm “在 MuseScore 中打开” is enabled and inspect B-flat/E-flat/F transposition, ties, voices, rests, and page breaks.
+13. In “可编辑乐谱”, Ctrl-click multiple notes; move with arrows/drag, resize with Shift+Left/Right or the right edge, edit velocity/staff/voice, and confirm each action has one Ctrl+Z/Ctrl+Y step.
+14. Toggle the raw-evidence overlay, enable a selection loop, and confirm the red playhead follows source playback or the score-only preview clock.
+15. Save to a Unicode/spaced `.timbrescribe` path, reopen it, and confirm stable IDs and edits; simulate a later edit during a Mock job and confirm the stale result is rejected.
+16. Trigger an autosave, restart with the recovery file present, and confirm recovery is offered without overwriting the primary project.
 
 Pinned Verovio integration is automated. Do not claim the external MuseScore round trip until MuseScore 4 is explicitly installed and used; the current development machine reports it unavailable.

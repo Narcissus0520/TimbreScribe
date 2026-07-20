@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 0 proves the smallest honest score path. Phase 1 adds deterministic source-media handling. Phase 2 adds a verified Basic Pitch ONNX CPU baseline. Phase 3 converts immutable evidence into reviewed, deterministic notation and professional local rendering/export while preserving every earlier boundary.
+Phase 0 proves the smallest honest score path. Phase 1 adds deterministic source-media handling. Phase 2 adds a verified Basic Pitch ONNX CPU baseline. Phase 3 converts immutable evidence into reviewed notation and professional local rendering/export. Phase 4 adds command editing and project persistence while preserving every earlier boundary.
 
 ## Dependency direction
 
@@ -29,6 +29,11 @@ reviewed notation controller
     -> pure suggestion / quantization / voice / measure stages
     -> MusicXML 4.0 as canonical renderer input
     -> pinned native Verovio toolkit and atomic export adapters
+
+editing controller
+    -> immutable physical-time edited events and command stack
+    -> project persistence ports
+        -> bounded versioned archive and recovery adapters
 ```
 
 The domain imports neither PySide6 nor filesystem, subprocess, exporter, or model SDK code. Application services depend on protocols for exports. Composition code is the only place that wires concrete adapters to UI and services.
@@ -111,12 +116,43 @@ The Verovio Python toolkit is a pinned local runtime dependency. Its output is r
 
 MXL reads no member onto the filesystem: member count, paths, encryption, individual size, total size, required container entries, and rootfile path are checked before bounded in-memory reads. Visual exports share Verovio SVG; QtSvg paints it to an explicit-DPI image or directly into `QPdfWriter`, preserving vector PDF output.
 
+## Phase 4 editing and persistence flow
+
+```text
+RawTranscription + reviewed ScoreDocument + NotationSettings
+  -> EditingProject with immutable baseline and exact EditedNoteEvent values
+  -> validated command (stable affected IDs, description, one logical history step)
+  -> new project snapshot + monotonic revision
+  -> deterministic ScoreDocument re-derivation
+  -> refreshed MusicXML/Verovio/MIDI snapshot
+
+primary save / autosave immutable snapshot
+  -> project persistence application port
+  -> deterministic ZIP members + SHA-256 manifest
+  -> sibling temporary file + atomic replacement
+
+untrusted project archive
+  -> member/path/type/count/size/ratio/hash validation in memory
+  -> ordered schema migration in memory
+  -> domain construction and edited-event score re-derivation
+  -> exact MusicXML/MIDI consistency checks
+  -> active session promotion only after every check succeeds
+```
+
+Execute, undo, and redo all advance the revision even when undo restores saved content. Dirty state compares persisted content, not revision. A background operation captures `(project_id, revision)` and cannot promote its result after any later mutation. Bulk inspector edits are a composite command and remain one undo step.
+
+Autosave targets only the managed recovery directory and records project ID, timestamp, and optional primary path. Opening a recovery archive leaves it dirty until the user explicitly saves. Source media is referenced by Unicode path and SHA-256; it is not embedded automatically.
+
+The playback transport uses source media as the clock when available and drives the editable score playhead from millisecond position signals. Score-only projects use a deterministic local preview clock; Phase 6 owns synthesizer/audio-timbre refinement.
+
 ## Data ownership
 
 - `RawNoteEvent` is immutable source evidence and retains engine/model provenance.
 - `TranscriptionSettingsSnapshot` and `EngineRunProvenance` retain the request, source hash, runtime, model hash, load count, and inference duration.
 - `ScoreNote` uses rational beat positions and explicit written/sounding pitch.
 - `ScoreDocument` contains deterministic notation state and does not mutate the raw events.
+- `EditedNoteEvent` is the exact physical-time correction layer; user changes never replace raw events.
+- `EditingProject` is an immutable versioned snapshot; the application command stack owns history and dirty state.
 - MusicXML and MIDI are derived artifacts from one score snapshot.
 
 ## Rendering decision
@@ -140,7 +176,10 @@ The professional view uses pinned local Verovio 6.2.1 through its Python toolkit
 - MXL never extracts untrusted archive paths and applies bounded expansion limits.
 - Verovio output is sanitized before display/export; preview has no script, network, file, plugin, or native-bridge capability.
 - MuseScore discovery is read-only and the external process starts only after an explicit user action.
+- Project archives are never extracted; loaders reject unsafe paths, links, encryption, duplicates, abnormal expansion, unknown archive versions, and inconsistent hashes or derived artifacts.
+- Autosave never targets the primary project path, and a failed load cannot partially replace the open session.
+- Background transcription/save results use project revision tokens so stale work cannot overwrite later edits or falsely clear dirty state.
 
 ## Deferred architecture
 
-Persistent project archives, direct score editing/undo, synthesis/playback polish, packaging, and full artifact-specific license manifests are intentionally deferred to their ordered milestones. Phase 3 notation is a reviewed derived snapshot, not yet a command-editable project model.
+Multi-part model inference, advanced voice/percussion notation, synthesized playback polish, assistant providers, packaging, and full artifact-specific license manifests remain deferred to their ordered milestones.

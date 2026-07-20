@@ -42,10 +42,19 @@ class AppPaths:
     def settings_file(self) -> Path:
         return self.root / "settings.json"
 
+    @property
+    def score_preview_midi(self) -> Path:
+        return self.cache / "playback" / "current.mid"
+
+    @property
+    def recovery(self) -> Path:
+        return self.root / "recovery"
+
     def create(self) -> None:
         self.logs.mkdir(parents=True, exist_ok=True)
         self.jobs.mkdir(parents=True, exist_ok=True)
         self.decoded_media.mkdir(parents=True, exist_ok=True)
+        self.recovery.mkdir(parents=True, exist_ok=True)
 
     def create_job_directory(self, job_id: str) -> Path:
         if _SAFE_JOB_ID.fullmatch(job_id) is None:

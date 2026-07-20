@@ -77,6 +77,7 @@ class ScoreBuilder:
             sounding_pitch=note.pitch_midi,
             start_beat=start,
             duration_beats=end - start,
+            velocity=note.velocity,
         )
 
     def _seconds_to_beats(self, seconds: float) -> Fraction:
