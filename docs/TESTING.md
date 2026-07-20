@@ -12,12 +12,33 @@ uv sync --group dev
 
 The script runs formatting, linting, strict typing, and all tests excluding the opt-in `model` and `packaging` markers.
 
-## Test layers through Phase 1
+## Optional Basic Pitch model suite
 
-- Unit: source-media invariants, cache keys/cleanup, recent media, waveform sampling, playback state, rational score conversion, job transitions, MusicXML structure, MIDI structure, and atomic exports.
-- Contract: protocol v1 parsing, unknown-field compatibility, incompatible-version errors, stdout JSONL discipline, progress, warning, failure, and cancellation.
-- Integration: exact FFmpeg discovery, generated WAV/MP3/MP4 probing, audio-less rejection, Unicode/spaced paths, source-hash preservation, real decode/cache hit/cancellation, real Mock subprocess, result loading, score construction, and exports.
-- GUI: offscreen media import/decode/waveform responsiveness plus Mock success/failure/cancellation and export state using `pytest-qt`.
+The default environment intentionally contains no model package. Install and verify the exact ONNX-only developer environment, then opt in explicitly:
+
+```powershell
+./tools/setup_basic_pitch.ps1
+$env:TIMBRESCRIBE_RUN_MODEL_TESTS = "1"
+uv run pytest -q --no-cov -m model tests/model/test_basic_pitch_model.py
+```
+
+The real-model test generates its own 440 Hz WAV, runs two jobs through one QProcess, checks Qt event-loop heartbeats, verifies raw provenance, and requires `model_load_count == 1` for both jobs. The manual `Basic Pitch model smoke` GitHub workflow provides the same opt-in gate.
+
+For a reproducible local CPU record:
+
+```powershell
+uv run --group basic-pitch python benchmarks/basic_pitch_cpu.py path/to/decoded.wav --output benchmark.json
+```
+
+The JSON records hardware, Python/engine/runtime/model identity, model hash, input duration/size, settings, cold/warm runtime, detected-note count, and Windows peak working set. Benchmark output belongs outside version control unless a milestone explicitly selects a fixture/result.
+
+## Test layers through Phase 2
+
+- Unit: source-media invariants, cache keys/cleanup, waveform/playback state, raw/settings/provenance validation, Basic Pitch normalization/error boundaries, rational score conversion, MusicXML/MIDI structure, confidence views, and atomic raw/score exports.
+- Contract: protocol v1 parsing, Basic Pitch request settings, unknown-field compatibility, incompatible-version errors, stdout JSONL discipline, progress, warning, result, failure, and cancellation.
+- Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, result loading, and exports.
+- GUI: offscreen media responsiveness, Mock paths, Basic Pitch persistent-client reuse, confidence-filtered piano roll, raw MIDI export, and forced-cancel no-promotion behavior using `pytest-qt`.
+- Model (opt-in): exact Basic Pitch/ONNX availability, real CPU inference, persistent model reuse, provenance, and Qt responsiveness.
 
 ## Manual smoke test
 
@@ -33,5 +54,7 @@ Then:
 4. Run the Mock monophonic scenario and observe genuine progress followed by a visible staff preview.
 5. Export `.musicxml` and `.mid` files to a Unicode/spaced path.
 6. Run Mock failure/cancellation and confirm the previous score remains visible.
+7. After optional model setup, decode a short single-instrument range, run Basic Pitch twice, adjust the confidence filter, and export raw MIDI.
+8. Confirm the UI says the baseline is instrument-agnostic, performs no instrument separation, and works best on one instrument.
 
 Do not claim Verovio or MuseScore round-trip validation until those tools are explicitly installed and used.

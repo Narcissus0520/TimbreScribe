@@ -1,0 +1,38 @@
+name: Basic Pitch model smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  basic-pitch-cpu:
+    name: Windows Basic Pitch CPU smoke
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      PYTHONUTF8: "1"
+      QT_QPA_PLATFORM: offscreen
+      TIMBRESCRIBE_RUN_MODEL_TESTS: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.29"
+          enable-cache: true
+
+      - name: Synchronize verified ONNX environment
+        run: uv sync --frozen --group dev --group basic-pitch
+
+      - name: Verify ONNX-only runtime
+        shell: pwsh
+        run: ./tools/setup_basic_pitch.ps1 -VerifyOnly
+
+      - name: Run real model smoke
+        run: uv run pytest -q --no-cov -m model tests/model/test_basic_pitch_model.py

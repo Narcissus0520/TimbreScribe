@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 0 proves the smallest honest score path. Phase 1 adds a source-media path that imports and probes local media, selects a stream/range, decodes a deterministic lossless derivative, plays the untouched source, and renders a bounded waveform without introducing a real model.
+Phase 0 proves the smallest honest score path. Phase 1 adds deterministic source-media handling. Phase 2 adds a verified Basic Pitch ONNX CPU baseline while keeping raw evidence, model code, and notation state at separate boundaries.
 
 ## Dependency direction
 
@@ -16,6 +16,10 @@ infrastructure adapters
 
 separate Mock worker
     -> shared versioned protocol and artifact schemas
+
+separate persistent Basic Pitch worker
+    -> verified optional ONNX runtime/model
+    -> shared protocol-v1 commands and immutable artifacts
 
 media workflow controller
     -> asynchronous FFmpeg probe/decode and waveform adapters
@@ -59,9 +63,27 @@ FFmpeg discovery checks the bundled component location, an approved configured d
 
 The decoded-cache key covers source content hash, stream, selected range, output sample rate/channels, and pipeline version. Cache cleanup cannot traverse outside the centrally configured derived-data root and never touches source media or project files.
 
+## Phase 2 Basic Pitch flow
+
+```text
+decoded PCM WAV + settings snapshot
+  -> lazy persistent QProcess
+  -> worker preloads verified Basic Pitch 0.4.0 nmp.onnx on its main thread
+  -> sequential predict calls reuse one model instance
+  -> raw notes + settings + source/model/runtime provenance are atomically written
+  -> Qt client validates protocol, job ID, result path, schema, and hashes
+  -> confidence-filtered view renders in physical-time piano roll
+  -> raw MIDI exporter maps seconds directly at 480 ticks/second
+```
+
+The optional model environment is not part of default CI or the TimbreScribe wheel. `detect_basic_pitch()` checks installed package identity and the exact ONNX hash without importing model code. The UI reports missing/mismatched state and never silently falls back to Mock. Basic Pitch is represented as instrument-agnostic; no instrument label, MIDI program, channel, or separation claim is synthesized.
+
+The worker stays alive after a terminal result so a second job avoids model reload. A reader thread can set a cooperative cancellation flag while inference runs on the main thread. Because the upstream call itself is not interruptible, the Qt client terminates and then kills the isolated process after bounded timeouts. A cancellation race always discards the result.
+
 ## Data ownership
 
 - `RawNoteEvent` is immutable source evidence and retains engine/model provenance.
+- `TranscriptionSettingsSnapshot` and `EngineRunProvenance` retain the request, source hash, runtime, model hash, load count, and inference duration.
 - `ScoreNote` uses rational beat positions and explicit written/sounding pitch.
 - `ScoreDocument` contains deterministic notation state and does not mutate the raw events.
 - MusicXML and MIDI are derived artifacts from one score snapshot.
@@ -81,7 +103,10 @@ Phase 0 uses a small Qt painter-based score preview adapter. It displays real sc
 - Decode cancellation sends `q`, then terminate, then kill after bounded timeouts; partial audio/metadata are never reported as success.
 - Source files are opened read-only by probe/decode/playback adapters and verified unchanged by generated-media tests.
 - Mock/Test identity is visible in UI and artifacts.
+- Optional-model availability is checked without importing inference libraries into the GUI.
+- Basic Pitch stdout remains protocol-only; upstream messages and native-runtime warnings are stderr diagnostics.
+- Raw confidence filtering is non-destructive, and raw MIDI export uses the currently selected view threshold.
 
 ## Deferred architecture
 
-Real model workers, persistent project archives, Verovio assets, score-preview synthesis, full editing/undo, loop/speed playback polish, and packaging are intentionally deferred to their ordered milestones.
+Persistent project archives, Verovio assets, score-preview synthesis, full editing/undo, loop/speed playback polish, and packaging are intentionally deferred to their ordered milestones. Phase 2 raw Basic Pitch notes are not yet the editable multi-part score model.

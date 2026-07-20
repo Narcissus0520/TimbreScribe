@@ -26,12 +26,16 @@ from PySide6.QtWidgets import (
 from timbrescribe.application import JobManager, PhaseZeroService, ScorePresentation
 from timbrescribe.domain.errors import TimbreScribeError
 from timbrescribe.domain.transcription import RawTranscription
+from timbrescribe.infrastructure.basic_pitch import BasicPitchAvailability
 from timbrescribe.infrastructure.workers.qt_mock_client import QtMockWorkerClient
+from timbrescribe.ui.basic_pitch_workspace import BasicPitchWorkspace
 from timbrescribe.ui.media_workspace import MediaWorkspace
+from timbrescribe.ui.piano_roll import PianoRollWidget
 from timbrescribe.ui.score_preview import ScorePreviewWidget
 from timbrescribe.ui.waveform import WaveformWidget
 
 if TYPE_CHECKING:
+    from timbrescribe.ui.basic_pitch_controller import BasicPitchController
     from timbrescribe.ui.media_controller import MediaWorkflowController
 
 
@@ -47,6 +51,7 @@ class MainWindow(QMainWindow):
         service: PhaseZeroService,
         worker: QtMockWorkerClient,
         jobs: JobManager,
+        basic_pitch_availability: BasicPitchAvailability,
     ) -> None:
         super().__init__()
         self._service = service
@@ -56,8 +61,9 @@ class MainWindow(QMainWindow):
         self._active_job_id: str | None = None
         self._presentation: ScorePresentation | None = None
         self._media_controller: MediaWorkflowController | None = None
+        self._basic_pitch_controller: BasicPitchController | None = None
 
-        self.setWindowTitle(_tr("TimbreScribe · 谱迹 — 媒体 + Mock/Test"))
+        self.setWindowTitle(_tr("TimbreScribe · 谱迹 — Basic Pitch + Mock/Test"))
         self.resize(1180, 760)
         self.setMinimumSize(860, 600)
 
@@ -73,12 +79,19 @@ class MainWindow(QMainWindow):
         self.export_musicxml_action.setEnabled(False)
         self.export_midi_action = QAction(_tr("导出 MIDI"), self)
         self.export_midi_action.setEnabled(False)
+        self.run_basic_pitch_action = QAction(_tr("运行 Basic Pitch"), self)
+        self.run_basic_pitch_action.setEnabled(basic_pitch_availability.available)
+        self.cancel_basic_pitch_action = QAction(_tr("取消 Basic Pitch"), self)
+        self.cancel_basic_pitch_action.setEnabled(False)
+        self.export_raw_midi_action = QAction(_tr("导出原始 MIDI"), self)
+        self.export_raw_midi_action.setEnabled(False)
 
         self.score_preview = ScorePreviewWidget(self)
         self.musicxml_preview = QPlainTextEdit(self)
         self.musicxml_preview.setReadOnly(True)
         self.musicxml_preview.setPlaceholderText(_tr("生成后的 MusicXML 4.0 将显示在这里。"))
         self.waveform_view = WaveformWidget(self)
+        self.piano_roll_view = PianoRollWidget(self)
         self.tabs = QTabWidget(self)
         self.tabs.addTab(self.score_preview, _tr("乐谱"))
         self.tabs.addTab(self.musicxml_preview, _tr("MusicXML"))
@@ -86,9 +99,14 @@ class MainWindow(QMainWindow):
             self.waveform_view,
             _tr("波形/源媒体"),
         )
+        self.piano_roll_tab_index = self.tabs.addTab(
+            self.piano_roll_view,
+            _tr("原始钢琴卷帘"),
+        )
         self.setCentralWidget(self.tabs)
 
         self.media_workspace = MediaWorkspace(self)
+        self.basic_pitch_workspace = BasicPitchWorkspace(basic_pitch_availability, self)
 
         self.scenario_combo = QComboBox(self)
         self.scenario_combo.addItem(_tr("单旋律"), "monophonic")
@@ -135,6 +153,29 @@ class MainWindow(QMainWindow):
         controller.error.connect(self._show_error)
         self.import_media_action.setEnabled(True)
 
+    @property
+    def basic_pitch_controller(self) -> BasicPitchController | None:
+        return self._basic_pitch_controller
+
+    def attach_basic_pitch_controller(self, controller: BasicPitchController) -> None:
+        """Attach the Phase 2 workflow after media composition is complete."""
+
+        if self._basic_pitch_controller is not None:
+            raise RuntimeError("A Basic Pitch controller is already attached")
+        self._basic_pitch_controller = controller
+        controller.setParent(self)
+        controller.diagnostic.connect(self._append_diagnostic)
+        controller.status.connect(self.statusBar().showMessage)
+        controller.progress.connect(self.progress_bar.setValue)
+        controller.error.connect(self._show_error)
+        controller.busy_changed.connect(self._on_basic_pitch_busy_changed)
+        self.run_basic_pitch_action.triggered.connect(controller.start)
+        self.cancel_basic_pitch_action.triggered.connect(controller.cancel)
+        self.export_raw_midi_action.triggered.connect(self._choose_raw_midi_destination)
+        self.basic_pitch_workspace.export_raw_midi_requested.connect(
+            self._choose_raw_midi_destination
+        )
+
     def _build_toolbar(self) -> None:
         toolbar = QToolBar(_tr("工作台工具"), self)
         toolbar.setMovable(False)
@@ -146,6 +187,10 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
         toolbar.addAction(self.export_musicxml_action)
         toolbar.addAction(self.export_midi_action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.run_basic_pitch_action)
+        toolbar.addAction(self.cancel_basic_pitch_action)
+        toolbar.addAction(self.export_raw_midi_action)
         self.addToolBar(toolbar)
 
     def _build_docks(self) -> None:
@@ -165,6 +210,12 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, source_dock)
         self.tabifyDockWidget(media_dock, source_dock)
         media_dock.raise_()
+
+        basic_pitch_dock = QDockWidget(_tr("Basic Pitch CPU"), self)
+        basic_pitch_dock.setObjectName("basicPitchDock")
+        basic_pitch_dock.setWidget(self.basic_pitch_workspace)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, basic_pitch_dock)
+        self.tabifyDockWidget(media_dock, basic_pitch_dock)
 
         inspector_dock = QDockWidget(_tr("乐谱检查器"), self)
         inspector_dock.setObjectName("scoreInspectorDock")
@@ -317,6 +368,17 @@ class MainWindow(QMainWindow):
         if not busy:
             self._active_job_id = None
 
+    def _on_basic_pitch_busy_changed(self, busy: bool) -> None:
+        self.run_basic_pitch_action.setEnabled(
+            self.basic_pitch_workspace.run_button.isEnabled() and not busy
+        )
+        self.cancel_basic_pitch_action.setEnabled(busy)
+        if not busy and self._basic_pitch_controller is not None:
+            available = self._basic_pitch_controller.raw_transcription is not None
+            self.export_raw_midi_action.setEnabled(available)
+            if available:
+                self.tabs.setCurrentIndex(self.piano_roll_tab_index)
+
     def _choose_musicxml_destination(self) -> None:
         filename, _ = QFileDialog.getSaveFileName(
             self,
@@ -346,6 +408,29 @@ class MainWindow(QMainWindow):
         )
         if filename:
             self._perform_export(Path(filename), kind="midi")
+
+    def _choose_raw_midi_destination(self) -> None:
+        controller = self._basic_pitch_controller
+        if controller is None:
+            return
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            _tr("导出 Basic Pitch 原始 MIDI"),
+            "TimbreScribe-Basic-Pitch-Raw.mid",
+            _tr("MIDI (*.mid)"),
+        )
+        if not filename:
+            return
+        try:
+            exported = controller.export_raw_midi(Path(filename))
+        except (TimbreScribeError, OSError, ValueError) as exc:
+            self._show_error(
+                _tr("原始 MIDI 导出失败"),
+                str(exc),
+                _tr("降低置信度阈值或选择可写目录后重试。"),
+            )
+            return
+        self.statusBar().showMessage(_tr("已导出原始 MIDI：{path}").format(path=exported), 8_000)
 
     def _perform_export(self, destination: Path, *, kind: str) -> None:
         try:
@@ -391,6 +476,8 @@ class MainWindow(QMainWindow):
         self.diagnostics.appendPlainText(text)
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        if self._basic_pitch_controller is not None:
+            self._basic_pitch_controller.shutdown()
         if self._media_controller is not None:
             self._media_controller.shutdown()
         self._worker.shutdown()

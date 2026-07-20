@@ -7,7 +7,12 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
-from timbrescribe.domain.transcription import RawNoteEvent, RawTranscription
+from timbrescribe.domain.transcription import (
+    EngineRunProvenance,
+    RawNoteEvent,
+    RawTranscription,
+    TranscriptionSettingsSnapshot,
+)
 from timbrescribe.shared.artifact import TranscriptionArtifact
 
 MAX_ARTIFACT_BYTES = 10 * 1024 * 1024
@@ -20,7 +25,7 @@ def load_transcription_artifact(path: Path, *, expected_job_id: str) -> RawTrans
         if path.stat().st_size > MAX_ARTIFACT_BYTES:
             raise TimbreScribeError(
                 ErrorCode.ARTIFACT_INVALID,
-                "Worker result artifact exceeds the Phase 0 size limit",
+                "Worker result artifact exceeds the supported size limit",
                 "Inspect the worker configuration and retry.",
             )
         artifact = TranscriptionArtifact.model_validate_json(path.read_text(encoding="utf-8"))
@@ -52,6 +57,7 @@ def load_transcription_artifact(path: Path, *, expected_job_id: str) -> RawTrans
             source_model_id=artifact.model_id,
             source_model_revision=artifact.model_revision,
             source_event_id=record.source_event_id,
+            pitch_bends=record.pitch_bends,
         )
         for record in artifact.notes
     )
@@ -64,4 +70,13 @@ def load_transcription_artifact(path: Path, *, expected_job_id: str) -> RawTrans
         model_revision=artifact.model_revision,
         notes=notes,
         warnings=artifact.warnings,
+        source_audio_sha256=artifact.source_audio_sha256,
+        settings=(
+            TranscriptionSettingsSnapshot(**artifact.settings.model_dump())
+            if artifact.settings is not None
+            else None
+        ),
+        provenance=(
+            EngineRunProvenance(**artifact.run.model_dump()) if artifact.run is not None else None
+        ),
     )

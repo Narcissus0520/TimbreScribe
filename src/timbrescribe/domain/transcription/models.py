@@ -2,7 +2,53 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
+
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+@dataclass(frozen=True, slots=True)
+class TranscriptionSettingsSnapshot:
+    """Engine-request values retained with immutable raw evidence."""
+
+    onset_threshold: float
+    frame_threshold: float
+    minimum_note_length_ms: float
+    minimum_frequency_hz: float
+    maximum_frequency_hz: float
+    minimum_confidence: float
+    include_pitch_bends: bool
+
+    def __post_init__(self) -> None:
+        for value in (self.onset_threshold, self.frame_threshold, self.minimum_confidence):
+            if not 0 <= value <= 1:
+                raise ValueError("Transcription thresholds must be in [0, 1]")
+        if self.minimum_note_length_ms <= 0:
+            raise ValueError("Minimum note length must be positive")
+        if not 0 < self.minimum_frequency_hz < self.maximum_frequency_hz:
+            raise ValueError("Frequency range must satisfy 0 < minimum < maximum")
+
+
+@dataclass(frozen=True, slots=True)
+class EngineRunProvenance:
+    """Runtime/model facts captured by the isolated worker."""
+
+    runtime_id: str
+    runtime_version: str
+    model_sha256: str
+    model_load_count: int
+    inference_seconds: float
+
+    def __post_init__(self) -> None:
+        if (
+            not self.runtime_id
+            or not self.runtime_version
+            or _SHA256.fullmatch(self.model_sha256) is None
+        ):
+            raise ValueError("Runtime identity and model SHA-256 are required")
+        if self.model_load_count < 1 or self.inference_seconds < 0:
+            raise ValueError("Runtime counters must be non-negative")
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +69,7 @@ class RawNoteEvent:
     source_model_id: str | None
     source_model_revision: str | None
     source_event_id: str
+    pitch_bends: tuple[int, ...] | None = None
 
     def __post_init__(self) -> None:
         if not self.id:
@@ -41,6 +88,10 @@ class RawNoteEvent:
             raise ValueError("MIDI channel must be absent or in [0, 15]")
         if not self.source_engine or not self.source_engine_version:
             raise ValueError("Source engine identity is required")
+        if self.pitch_bends is not None and not all(
+            -127 <= bend <= 127 for bend in self.pitch_bends
+        ):
+            raise ValueError("Raw pitch-bend bins must be in [-127, 127]")
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +106,9 @@ class RawTranscription:
     model_revision: str | None
     notes: tuple[RawNoteEvent, ...]
     warnings: tuple[str, ...] = ()
+    source_audio_sha256: str | None = None
+    settings: TranscriptionSettingsSnapshot | None = None
+    provenance: EngineRunProvenance | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -66,3 +120,17 @@ class RawTranscription:
         ids = [note.id for note in self.notes]
         if len(ids) != len(set(ids)):
             raise ValueError("Raw note IDs must be unique")
+        if (
+            self.source_audio_sha256 is not None
+            and _SHA256.fullmatch(self.source_audio_sha256) is None
+        ):
+            raise ValueError("Source audio SHA-256 must contain 64 hexadecimal characters")
+
+    def notes_at_confidence(self, minimum: float) -> tuple[RawNoteEvent, ...]:
+        """Filter a view of raw evidence without mutating or discarding it."""
+
+        if not 0 <= minimum <= 1:
+            raise ValueError("Minimum confidence must be in [0, 1]")
+        return tuple(
+            note for note in self.notes if note.confidence is None or note.confidence >= minimum
+        )
