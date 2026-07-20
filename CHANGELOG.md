@@ -6,6 +6,14 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Added
 
+- Reviewed tempo/key suggestions and manual meter, instrument, concert-pitch, quantization, triplet, and confidence controls.
+- Exact rational notation pipeline with repeated-note merging, staff/voice allocation, rests, cross-bar ties, pitch spelling, range diagnostics, and immutable raw provenance links.
+- B-flat, E-flat, and F transposing-instrument profiles with MusicXML `<transpose>` metadata and sounding-pitch MIDI export.
+- Deterministic secure MXL containers plus traversal, encryption, count, and expansion limits.
+- Pinned local Verovio 6.2.1 multipage rendering in a locked-down viewer with page, fit, zoom, and reload controls.
+- Atomic SVG, DPI-controlled PNG, and vector PDF exports from the same sanitized SVG source.
+- Read-only MuseScore discovery and availability-gated external opening.
+- Hypothesis notation invariants and real Verovio/MXL/visual-export integration coverage.
 - Verified optional Basic Pitch 0.4.0 ONNX CPU runtime and exact bundled-model manifest.
 - Persistent isolated Basic Pitch worker with protocol-v1 settings, provenance, cancellation, and model reuse.
 - Engine/model availability UI, conservative transcription controls, and honest instrument-agnostic capability language.
@@ -38,7 +46,11 @@ All notable changes to TimbreScribe will be documented in this file. The project
 - Bridged Qt Multimedia 64-bit time signals explicitly for reliable PySide6 signal delivery.
 - Prevented successful FFmpeg exits without an artifact and process-start errors from promoting invalid cache entries.
 
-## [0.3.0] - Unreleased
+## [0.4.0] - Unreleased
+
+Phase 3 adds reviewed deterministic notation, transposing-instrument semantics, local professional rendering, and MusicXML/MXL/MIDI/SVG/PNG/vector-PDF export. External MuseScore validation remains pending where MuseScore 4 is not installed.
+
+## [0.3.0] - 2026-07-21
 
 Phase 2 adds the verified Basic Pitch ONNX CPU baseline and raw piano-roll workflow. It does not claim instrument separation or a finished editable score.
 

@@ -24,6 +24,7 @@ class BasicPitchController(QObject):
     progress = Signal(int)
     error = Signal(str, str, str, str)
     busy_changed = Signal(bool)
+    raw_changed = Signal(object)
 
     def __init__(
         self,
@@ -144,6 +145,7 @@ class BasicPitchController(QObject):
             return
         self._jobs.succeed(raw_value.job_id)
         self._raw = raw_value
+        self.raw_changed.emit(raw_value)
         self._active_job_id = None
         self._apply_confidence_filter(self._workspace.confidence_filter)
         provenance = raw_value.provenance

@@ -7,10 +7,12 @@ The default suite is deterministic, model-free, and safe for Windows CI. It uses
 ```powershell
 uv sync --group dev
 ./tools/setup_ffmpeg.ps1
+./tools/validate_musicxml_xsd.ps1
 ./tools/run_quality.ps1
 ```
 
 The script runs formatting, linting, strict typing, and all tests excluding the opt-in `model` and `packaging` markers.
+The separate XSD gate downloads the W3C MusicXML 4.0 schemas from the pinned `v4.0` source tag, verifies recorded hashes, generates piano/B-flat/E-flat/F fixtures, and validates them through .NET's offline schema engine. Windows CI runs this gate explicitly.
 
 ## Optional Basic Pitch model suite
 
@@ -32,12 +34,12 @@ uv run --group basic-pitch python benchmarks/basic_pitch_cpu.py path/to/decoded.
 
 The JSON records hardware, Python/engine/runtime/model identity, model hash, input duration/size, settings, cold/warm runtime, detected-note count, and Windows peak working set. Benchmark output belongs outside version control unless a milestone explicitly selects a fixture/result.
 
-## Test layers through Phase 2
+## Test layers through Phase 3
 
-- Unit: source-media invariants, cache keys/cleanup, waveform/playback state, raw/settings/provenance validation, Basic Pitch normalization/error boundaries, rational score conversion, MusicXML/MIDI structure, confidence views, and atomic raw/score exports.
+- Unit/property: source-media invariants, cache keys/cleanup, waveform/playback state, raw/settings/provenance validation, Basic Pitch normalization/error boundaries, exact quantization, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
 - Contract: protocol v1 parsing, Basic Pitch request settings, unknown-field compatibility, incompatible-version errors, stdout JSONL discipline, progress, warning, result, failure, and cancellation.
-- Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, result loading, and exports.
-- GUI: offscreen media responsiveness, Mock paths, Basic Pitch persistent-client reuse, confidence-filtered piano roll, raw MIDI export, and forced-cancel no-promotion behavior using `pytest-qt`.
+- Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, result loading, pinned Verovio 6.2.1 multi-page rendering, and SVG/PNG/vector-PDF export.
+- GUI: offscreen media responsiveness, Mock paths, Basic Pitch persistent-client reuse, confidence-filtered piano roll, reviewed notation controls, Verovio page state, professional exports, raw MIDI export, and forced-cancel no-promotion behavior using `pytest-qt`.
 - Model (opt-in): exact Basic Pitch/ONNX availability, real CPU inference, persistent model reuse, provenance, and Qt responsiveness.
 
 ## Manual smoke test
@@ -56,5 +58,9 @@ Then:
 6. Run Mock failure/cancellation and confirm the previous score remains visible.
 7. After optional model setup, decode a short single-instrument range, run Basic Pitch twice, adjust the confidence filter, and export raw MIDI.
 8. Confirm the UI says the baseline is instrument-agnostic, performs no instrument separation, and works best on one instrument.
+9. In “乐谱整理”, review the suggested tempo/key, keep safe 4/4 or choose another meter, select piano/B-flat/E-flat/F profiles, and generate notation.
+10. Inspect multiple Verovio pages; exercise previous/next, fit width/page, zoom, and reload.
+11. Export `.mxl`, `.svg`, `.png` at the default DPI, and vector `.pdf` to a Unicode/spaced path.
+12. On a machine with MuseScore 4, confirm “在 MuseScore 中打开” is enabled and inspect B-flat/E-flat/F transposition, ties, voices, rests, and page breaks.
 
-Do not claim Verovio or MuseScore round-trip validation until those tools are explicitly installed and used.
+Pinned Verovio integration is automated. Do not claim the external MuseScore round trip until MuseScore 4 is explicitly installed and used; the current development machine reports it unavailable.

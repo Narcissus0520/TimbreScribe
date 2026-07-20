@@ -16,6 +16,7 @@ class ScorePresentation:
 
     project: ScoreProject
     musicxml: str
+    diagnostics: tuple[str, ...] = ()
 
 
 class PhaseZeroService:

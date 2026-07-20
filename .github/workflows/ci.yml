@@ -48,5 +48,9 @@ jobs:
       - name: Type-check
         run: uv run mypy src/timbrescribe
 
+      - name: Validate generated MusicXML against W3C 4.0 XSD
+        shell: pwsh
+        run: ./tools/validate_musicxml_xsd.ps1 -CacheDirectory (Join-Path $env:RUNNER_TEMP "musicxml40-xsd")
+
       - name: Test model-free suite
         run: uv run pytest -m "not model and not packaging"

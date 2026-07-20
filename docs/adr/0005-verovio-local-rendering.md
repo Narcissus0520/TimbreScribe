@@ -20,3 +20,7 @@ The production score view will use a pinned local Verovio build in a constrained
 ## Consequences
 
 Phase 0 can demonstrate a visible score without concealing packaging work. A later milestone must pin assets, licenses and hashes, sandbox the bridge, and run rendering round-trip tests before replacing the adapter.
+
+## Phase 3 implementation note
+
+ADR 0013 implements this decision with the pinned local Verovio 6.2.1 Python toolkit, sanitized SVG, a no-bridge locked viewer, shared vector/raster exports, and real integration tests. Release-installer LGPL compliance remains a later packaging gate.

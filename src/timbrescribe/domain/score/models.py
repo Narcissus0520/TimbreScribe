@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from fractions import Fraction
 from math import ceil
+from typing import Literal
 
 from timbrescribe.domain.transcription import RawTranscription
 
@@ -27,6 +28,13 @@ class PitchSpelling:
         if not -1 <= self.octave <= 9:
             raise ValueError("Pitch octave is outside the MIDI notation range")
 
+    @property
+    def midi_pitch(self) -> int:
+        """Return the MIDI pitch represented by this written spelling."""
+
+        semitone = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}[self.step]
+        return (self.octave + 1) * 12 + semitone + self.alter
+
 
 @dataclass(frozen=True, slots=True)
 class ScoreNote:
@@ -44,6 +52,7 @@ class ScoreNote:
     tie_start: bool = False
     tie_stop: bool = False
     edited_by_user: bool = False
+    notations: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.id or not self.source_note_ids or not self.part_id:
@@ -72,6 +81,10 @@ class Part:
     midi_program: int
     midi_channel: int
     notes: tuple[ScoreNote, ...]
+    instrument_profile: InstrumentProfile | None = None
+    clef: Literal["treble", "bass", "alto", "tenor", "grand"] = "treble"
+    staff_count: int = 1
+    concert_pitch_view: bool = False
 
     def __post_init__(self) -> None:
         if not self.id or not self.name or not self.instrument_name:
@@ -82,6 +95,138 @@ class Part:
             raise ValueError("MIDI channel must be in [0, 15]")
         if any(note.part_id != self.id for note in self.notes):
             raise ValueError("Every note must refer to its containing part")
+        if self.staff_count not in {1, 2}:
+            raise ValueError("Phase 3 supports one or two staves per part")
+        if any(note.staff > self.staff_count for note in self.notes):
+            raise ValueError("A note staff exceeds the part staff count")
+
+
+@dataclass(frozen=True, slots=True)
+class PitchRange:
+    minimum: int
+    maximum: int
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.minimum <= self.maximum <= 127:
+            raise ValueError("Pitch range must satisfy 0 <= minimum <= maximum <= 127")
+
+    def contains(self, pitch: int) -> bool:
+        return self.minimum <= pitch <= self.maximum
+
+
+@dataclass(frozen=True, slots=True)
+class InstrumentProfile:
+    """Written-to-sounding transposition and notation metadata."""
+
+    id: str
+    display_name: str
+    family: str
+    midi_program: int
+    percussion: bool
+    preferred_clef: Literal["treble", "bass", "alto", "tenor", "grand"]
+    staff_count: int
+    written_range: PitchRange
+    sounding_range: PitchRange
+    diatonic_transposition: int
+    chromatic_transposition: int
+    octave_change: int
+    default_score_template: str
+
+    def __post_init__(self) -> None:
+        if not self.id or not self.display_name or not self.family:
+            raise ValueError("Instrument profile identity is required")
+        if not 0 <= self.midi_program <= 127:
+            raise ValueError("Instrument MIDI program must be in [0, 127]")
+        if self.staff_count not in {1, 2}:
+            raise ValueError("Instrument staff count must be one or two")
+        if not -11 <= self.diatonic_transposition <= 11:
+            raise ValueError("Diatonic transposition is outside the supported range")
+        if not -11 <= self.chromatic_transposition <= 11:
+            raise ValueError("Chromatic transposition is outside the supported range")
+        if not -3 <= self.octave_change <= 3:
+            raise ValueError("Octave transposition is outside the supported range")
+
+    @property
+    def sounding_interval(self) -> int:
+        return self.chromatic_transposition + (12 * self.octave_change)
+
+    def written_to_sounding(self, written_midi: int) -> int:
+        result = written_midi + self.sounding_interval
+        if not 0 <= result <= 127:
+            raise ValueError("Written pitch transposes outside the MIDI range")
+        return result
+
+    def sounding_to_written(self, sounding_midi: int) -> int:
+        result = sounding_midi - self.sounding_interval
+        if not 0 <= result <= 127:
+            raise ValueError("Sounding pitch transposes outside the MIDI range")
+        return result
+
+
+@dataclass(frozen=True, slots=True)
+class TempoEvent:
+    position_beat: Fraction
+    bpm: int
+
+    def __post_init__(self) -> None:
+        if self.position_beat < 0 or not 20 <= self.bpm <= 400:
+            raise ValueError("Invalid tempo event")
+
+
+@dataclass(frozen=True, slots=True)
+class MeterEvent:
+    position_beat: Fraction
+    beats: int
+    beat_unit: int
+
+    def __post_init__(self) -> None:
+        if self.position_beat < 0 or self.beats < 1 or self.beat_unit not in {1, 2, 4, 8, 16}:
+            raise ValueError("Invalid meter event")
+
+
+@dataclass(frozen=True, slots=True)
+class KeyEvent:
+    position_beat: Fraction
+    fifths: int
+    mode: Literal["major", "minor"]
+
+    def __post_init__(self) -> None:
+        if self.position_beat < 0 or not -7 <= self.fifths <= 7:
+            raise ValueError("Invalid key event")
+
+
+@dataclass(frozen=True, slots=True)
+class TempoMap:
+    events: tuple[TempoEvent, ...]
+
+    def __post_init__(self) -> None:
+        _validate_map(self.events)
+
+
+@dataclass(frozen=True, slots=True)
+class MeterMap:
+    events: tuple[MeterEvent, ...]
+
+    def __post_init__(self) -> None:
+        _validate_map(self.events)
+
+
+@dataclass(frozen=True, slots=True)
+class KeyMap:
+    events: tuple[KeyEvent, ...]
+
+    def __post_init__(self) -> None:
+        _validate_map(self.events)
+
+
+def _validate_map(
+    events: tuple[TempoEvent, ...] | tuple[MeterEvent, ...] | tuple[KeyEvent, ...],
+) -> None:
+    if not events or events[0].position_beat != 0:
+        raise ValueError("Score maps must begin at beat zero")
+    positions = [event.position_beat for event in events]
+    if positions != sorted(set(positions)):
+        raise ValueError("Score map positions must be sorted and unique")
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +241,10 @@ class ScoreDocument:
     beat_unit: int
     key_fifths: int
     parts: tuple[Part, ...]
+    key_mode: Literal["major", "minor"] = "major"
+    tempo_map: TempoMap | None = None
+    meter_map: MeterMap | None = None
+    key_map: KeyMap | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -111,6 +260,19 @@ class ScoreDocument:
         part_ids = [part.id for part in self.parts]
         if len(part_ids) != len(set(part_ids)):
             raise ValueError("Part IDs must be unique")
+        if self.tempo_map is not None and self.tempo_map.events[0].bpm != self.tempo_bpm:
+            raise ValueError("Initial tempo map event must match the score tempo")
+        if self.meter_map is not None:
+            initial_meter = self.meter_map.events[0]
+            if (initial_meter.beats, initial_meter.beat_unit) != (
+                self.beats_per_measure,
+                self.beat_unit,
+            ):
+                raise ValueError("Initial meter map event must match the score meter")
+        if self.key_map is not None:
+            initial_key = self.key_map.events[0]
+            if (initial_key.fifths, initial_key.mode) != (self.key_fifths, self.key_mode):
+                raise ValueError("Initial key map event must match the score key")
 
     @property
     def all_notes(self) -> tuple[ScoreNote, ...]:
