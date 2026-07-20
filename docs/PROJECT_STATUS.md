@@ -31,7 +31,7 @@ Phase 2 — Basic Pitch Baseline and Raw Piano Roll (`v0.3.0`).
 
 ## In progress
 
-- Final Phase 2 quality/audit pass, GitHub pull request, Windows CI, review, and merge.
+- Phase 2 PR #3 final review and merge after successful Windows CI.
 
 ## Known issues / blockers
 
@@ -57,11 +57,11 @@ Phase 2 — Basic Pitch Baseline and Raw Piano Roll (`v0.3.0`).
 | CPU benchmark on 2.0 s 440 Hz WAV | Passed: model load 0.115 s; cold inference 1.284 s; warm inference 0.035 s; one note; peak working set 233,213,952 bytes |
 | native Windows end-to-end visual smoke | Passed: media import/decode, one raw note, piano-roll view, settings/provenance diagnostics, and raw MIDI export; inference 1.273 s |
 | default and optional-environment `uv run pip-audit` | Passed: no known vulnerabilities; local project skipped because it is not on PyPI |
-| GitHub Actions `Windows quality gates` | Pending Phase 2 PR |
+| GitHub Actions `Windows quality gates` | Passed in 1m03s on PR #3: exact FFmpeg setup, format, lint, strict typing, and 106 model-free tests ([run 29771250522](https://github.com/Narcissus0520/TimbreScribe/actions/runs/29771250522)) |
 
 ## Next recommended task
 
-Open, verify, and merge the Phase 2 PR. Then begin Phase 3 persistent project data and deterministic editing without mutating raw evidence.
+Complete PR #3 review/merge, then begin Phase 3 persistent project data and deterministic editing without mutating raw evidence.
 
 ## Last updated date
 
