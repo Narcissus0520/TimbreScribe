@@ -2,66 +2,66 @@
 
 ## Current milestone
 
-Phase 2 — Basic Pitch Baseline and Raw Piano Roll (`v0.3.0`).
+Phase 3 — Reviewed Notation and Professional Export (`v0.4.0`).
 
 ## Current application version
 
-`0.3.0` (pre-alpha, unreleased).
+`0.4.0` (pre-alpha, unreleased).
 
 ## Merged baseline
 
 - Phase 0 deterministic Mock/Test score vertical slice merged by PR #1 as `c046387`.
-- Phase 1 media import/playback/decode/cache/waveform foundation merged by PR #2 as `3c5df334febbde2a4a1c6b02f862cfdde24c4c34`.
-- Python 3.11, uv, layered domain/application/infrastructure/UI boundaries, Ruff, strict Mypy, pytest coverage gate, pinned Windows Actions, MusicXML/MIDI export, and versioned JSONL worker protocol remain established.
+- Phase 1 media foundation merged by PR #2 as `3c5df334febbde2a4a1c6b02f862cfdde24c4c34`.
+- Phase 2 Basic Pitch baseline merged by PR #3 as `f5f92547b9276e02513a8c5c52f09d94cfc3b750`.
+- Python 3.11, uv, strict layers, Ruff, Mypy, branch-aware pytest coverage, pinned Windows Actions, immutable raw evidence, atomic exports, and protocol-v1 JSONL workers remain established.
 
 ## Completed in this milestone
 
-- Audited Spotify Basic Pitch 0.4.0 and selected its bundled ONNX model as the CPU baseline.
-- Recorded engine wheel SHA-256 `738adb503aae7fdfc7d1e1511aa0ce35052315f260a19531ef4c356708425db0` and model SHA-256 `2c3c1d144bfa61ad236e92e169c13535c880469a12a047d4e73451f2c059a0ec`.
-- Added an optional `uv` developer group that installs ONNX Runtime CPU and excludes unused TensorFlow/CoreML/TFLite runtime families.
-- Added a setup/verification script that checks exact engine/model identity and refuses unexpected runtime families.
-- Implemented engine/model availability detection without importing inference code into the GUI.
-- Implemented a persistent isolated Basic Pitch worker that preloads once, reuses the model, reserves stdout for protocol JSONL, and captures settings/source/model/runtime provenance.
-- Added a Qt worker adapter with capability negotiation, job/result-path validation, persistent reuse, cooperative cancellation, bounded terminate/kill, and no result promotion after cancellation.
-- Normalized Basic Pitch events into immutable raw notes without inventing instrument, program, channel, or separation metadata.
-- Added an explicit CPU settings panel and honest UI language: instrument-agnostic, no instrument separation, best on a single instrument.
-- Added a physical-time piano roll, non-destructive confidence filtering, and atomic raw MIDI export.
-- Added model-free protocol/worker/controller/GUI tests, a generated-tone opt-in real-model test, a manual model-smoke workflow, and a reproducible CPU benchmark.
-- Added ADR 0012 and updated architecture, testing, model-license, third-party, README, and changelog evidence.
+- Added conservative tempo and key suggestions that remain explicitly reviewable, plus manual tempo, key, mode, meter, instrument, concert-pitch, grid, triplet, and confidence controls.
+- Added exact rational physical-time-to-beat conversion, deterministic straight/triplet quantization, optional repeated-note merging, non-destructive confidence filtering, and diagnostics for large snaps and range problems.
+- Added deterministic staff and voice allocation, explicit instrument profiles, written/sounding pitch conversion, rests, cross-measure splitting, ties, and exact per-voice measure closure.
+- Added piano, flute, B-flat clarinet/trumpet/tenor saxophone, E-flat alto saxophone, and F horn profiles with range/clef/MIDI/transposition metadata.
+- Expanded MusicXML 4.0 output with score instruments, modes, staves, clefs, voices, rests, ties, and correct B-flat/E-flat/F `<transpose>` metadata.
+- Added deterministic atomic MXL output and bounded in-memory loading that rejects traversal, duplicate/encrypted entries, excessive member counts, and oversized expansion.
+- Pinned local `verovio==6.2.1`; added sanitized multi-page SVG rendering, page navigation, fit/zoom/reload controls, and a locked-down `QWebEngineView` with JavaScript, file, remote, plugin, and native-bridge access absent.
+- Added atomic continuous SVG, DPI-controlled PNG, and vector multi-page PDF exports from the same Verovio SVG source used by preview.
+- Added read-only MuseScore discovery and an action that is enabled only when MuseScore is available.
+- Added unit/property/GUI/integration coverage for quantization, polyphony, measure closure, ties, transposition round trips and metadata, MXL safety, real Verovio multipage rendering, and image/vector exports.
+- Added ADR 0013 and updated architecture, testing, third-party, README, changelog, and golden MusicXML evidence.
 
 ## In progress
 
-- Phase 2 PR #3 final review and merge after successful Windows CI.
+- Phase 3 PR #4 review and merge after a successful Windows CI run.
 
 ## Known issues / blockers
 
-- No Phase 2 code blocker is currently known.
-- Basic Pitch is a baseline for note events, not instrument separation or a finished editable score.
-- The optional dependency resolution uses `uv` scoped exclusions and is not suitable as a public pip extra; installer packaging remains a later compliance task.
-- Upstream `resampy` 0.4.2 imports the removed `pkg_resources.resource_filename`; the isolated model process supplies only that operation through an `importlib` compatibility module, with model tests guarding it until upstream is updated.
-- Basic Pitch inference is not cooperatively interruptible while inside the upstream call; cancellation safely discards and terminates the isolated worker when needed.
-- Professional Verovio rendering, editable score construction from Basic Pitch raw notes, project persistence, playback polish, packaging, and full transitive notices remain later ordered milestones.
+- No Phase 3 code blocker is currently known.
+- MuseScore is not installed on the current development machine, so automatic availability gating is tested but the external “open in release MuseScore” acceptance check remains pending on a machine with MuseScore 4.
+- Tempo and key detection are intentionally conservative suggestions, not automatic authoritative analysis.
+- Phase 3 produces a reviewed deterministic notation snapshot; direct note editing, undo/redo, project persistence, synthesis/playback polish, packaging, and full release compliance remain ordered later milestones.
+- The optional Basic Pitch dependency resolution still uses uv-scoped exclusions and is not a public pip extra.
 
 ## Verification commands and results
 
 | Command | Result |
 |---|---|
-| `tools/setup_ffmpeg.ps1` | Passed: exact shared LGPL FFmpeg 8.1 archive/executables/version/configuration verified |
-| `tools/setup_basic_pitch.ps1 -VerifyOnly` | Passed: Basic Pitch 0.4.0, ONNX Runtime 1.27.0 CPU, exact model SHA; no TensorFlow/CoreML/TFLite detected |
-| `uv run ruff format --check .` | Passed |
-| `uv run ruff check .` | Passed |
-| `uv run mypy src/timbrescribe` | Passed: 60 source files, strict mode |
-| `uv run pytest -m "not model and not packaging"` | Passed: 106 tests; 78.20% branch-aware coverage; separately repeated with model packages absent; 75% floor enforced |
-| real-model opt-in pytest | Passed: two jobs in one responsive Qt process; both reported `model_load_count == 1` |
-| persistent worker subprocess smoke | Passed: first inference 1.882 s, second 0.034 s, one model load, protocol-only stdout |
-| CPU benchmark on 2.0 s 440 Hz WAV | Passed: model load 0.115 s; cold inference 1.284 s; warm inference 0.035 s; one note; peak working set 233,213,952 bytes |
-| native Windows end-to-end visual smoke | Passed: media import/decode, one raw note, piano-roll view, settings/provenance diagnostics, and raw MIDI export; inference 1.273 s |
-| default and optional-environment `uv run pip-audit` | Passed: no known vulnerabilities; local project skipped because it is not on PyPI |
-| GitHub Actions `Windows quality gates` | Passed in 1m03s on PR #3: exact FFmpeg setup, format, lint, strict typing, and 106 model-free tests ([run 29771250522](https://github.com/Narcissus0520/TimbreScribe/actions/runs/29771250522)) |
+| `tools/setup_ffmpeg.ps1 -Destination <local cache>` | Passed: exact shared LGPL FFmpeg 8.1 archive/executables/version/configuration verified |
+| `ruff format --check .` | Passed |
+| `ruff check .` | Passed |
+| `mypy src/timbrescribe` | Passed: 76 source files, strict mode |
+| `pytest -m "not model and not packaging"` | Passed: 130 tests, 1 opt-in model deselection; 78.25% branch-aware coverage; 75% floor enforced |
+| Hypothesis notation properties | Passed: 140 generated transposition/measure examples plus deterministic unit cases |
+| pinned local Verovio integration | Passed: 6.2.1 loaded generated MusicXML and produced multiple sanitized SVG pages |
+| SVG/PNG/PDF smoke | Passed: visible PNG, valid SVG, and PDF without raster image objects |
+| native Windows GUI smoke | Passed: real locked QWebEngine displayed one local Verovio 6.2.1 page; notation controls and inspector remained responsive |
+| MXL safety/determinism | Passed: byte-identical exports, round trip, traversal and member-count rejection |
+| W3C MusicXML 4.0 XSD | Passed: hash-pinned official schemas validated generated piano, B-flat, E-flat, and F fixtures; CI gate added |
+| GitHub Actions Windows CI | Passed: run 29775036983 completed Ruff formatting/lint, strict Mypy, official XSD, and 130-test gates |
+| MuseScore availability | Correctly reported unavailable on this machine; action disabled; external round-trip pending |
 
 ## Next recommended task
 
-Complete PR #3 review/merge, then begin Phase 3 persistent project data and deterministic editing without mutating raw evidence.
+Complete Phase 3 PR/CI/merge, then begin Phase 4 deterministic editing, command-based undo/redo, and persistent project state without mutating raw evidence.
 
 ## Last updated date
 

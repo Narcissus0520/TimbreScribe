@@ -13,6 +13,24 @@ from timbrescribe.domain.score import Part, ScoreDocument
 from timbrescribe.infrastructure.exporting.atomic import atomic_destination
 
 TICKS_PER_BEAT = 480
+_MAJOR_KEYS = ("Cb", "Gb", "Db", "Ab", "Eb", "Bb", "F", "C", "G", "D", "A", "E", "B", "F#", "C#")
+_MINOR_KEYS = (
+    "Abm",
+    "Ebm",
+    "Bbm",
+    "Fm",
+    "Cm",
+    "Gm",
+    "Dm",
+    "Am",
+    "Em",
+    "Bm",
+    "F#m",
+    "C#m",
+    "G#m",
+    "D#m",
+    "A#m",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +73,8 @@ class MidiExporter:
                 time=0,
             )
         )
+        keys = _MAJOR_KEYS if score.key_mode == "major" else _MINOR_KEYS
+        track.append(MetaMessage("key_signature", key=keys[score.key_fifths + 7], time=0))
         track.append(MetaMessage("end_of_track", time=0))
 
     def _append_part_track(self, midi: MidiFile, part: Part) -> None:

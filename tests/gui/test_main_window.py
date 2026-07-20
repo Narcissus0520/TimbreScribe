@@ -36,6 +36,43 @@ def test_gui_exports_unicode_paths(main_window: MainWindow, qtbot: QtBot, tmp_pa
     assert midi.is_file()
 
 
+def test_reviewed_notation_verovio_and_professional_exports(
+    main_window: MainWindow,
+    qtbot: QtBot,
+    tmp_path: Path,
+) -> None:
+    _run_success(main_window, qtbot)
+    workspace = main_window.notation_workspace
+    assert workspace.generate_button.isEnabled()
+    assert workspace.settings_snapshot().tempo_source == "suggested"
+    assert workspace.settings_snapshot().key_source == "suggested"
+    workspace.tempo.setValue(workspace.tempo.value() + 1)
+    assert workspace.settings_snapshot().tempo_source == "manual"
+    workspace.instrument.setCurrentIndex(workspace.instrument.findData("clarinet-bb"))
+    workspace.generate_button.click()
+    qtbot.waitUntil(
+        lambda: (
+            main_window.presentation is not None
+            and main_window.presentation.project.score.parts[0].instrument_profile is not None
+        ),
+        timeout=5_000,
+    )
+
+    assert main_window.verovio_view.page_count >= 1
+    assert main_window.verovio_view.engine_version == "6.2.1"
+    assert main_window.export_mxl_action.isEnabled()
+    assert main_window.export_svg_action.isEnabled()
+    assert main_window.export_png_action.isEnabled()
+    assert main_window.export_pdf_action.isEnabled()
+    assert main_window.open_musescore_action.toolTip()
+
+    directory = tmp_path / "专业 导出"
+    assert main_window.export_mxl(directory / "乐谱.mxl").is_file()
+    assert main_window.export_svg(directory / "乐谱.svg").is_file()
+    assert main_window.export_png(directory / "乐谱.png").is_file()
+    assert main_window.export_pdf(directory / "乐谱.pdf").is_file()
+
+
 def test_simulated_failure_preserves_existing_score(main_window: MainWindow, qtbot: QtBot) -> None:
     _run_success(main_window, qtbot)
     previous = main_window.presentation

@@ -6,12 +6,15 @@
   <identification>
     <creator type="composer">Mock/Test engine</creator>
     <encoding>
-      <software>TimbreScribe 0.3.0</software>
+      <software>TimbreScribe 0.4.0</software>
     </encoding>
   </identification>
   <part-list>
     <score-part id="part-1">
       <part-name>Mock Melody</part-name>
+      <score-instrument id="part-1-I1">
+        <instrument-name>Acoustic Grand Piano</instrument-name>
+      </score-instrument>
       <midi-instrument id="part-1-I1">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
@@ -50,6 +53,7 @@
           <octave>4</octave>
         </pitch>
         <duration>1</duration>
+        <instrument id="part-1-I1" />
         <voice>1</voice>
         <type>quarter</type>
         <staff>1</staff>
@@ -60,6 +64,7 @@
           <octave>4</octave>
         </pitch>
         <duration>1</duration>
+        <instrument id="part-1-I1" />
         <voice>1</voice>
         <type>quarter</type>
         <staff>1</staff>
@@ -70,6 +75,7 @@
           <octave>4</octave>
         </pitch>
         <duration>1</duration>
+        <instrument id="part-1-I1" />
         <voice>1</voice>
         <type>quarter</type>
         <staff>1</staff>
@@ -80,6 +86,7 @@
           <octave>4</octave>
         </pitch>
         <duration>1</duration>
+        <instrument id="part-1-I1" />
         <voice>1</voice>
         <type>quarter</type>
         <staff>1</staff>

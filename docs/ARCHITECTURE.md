@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 0 proves the smallest honest score path. Phase 1 adds deterministic source-media handling. Phase 2 adds a verified Basic Pitch ONNX CPU baseline while keeping raw evidence, model code, and notation state at separate boundaries.
+Phase 0 proves the smallest honest score path. Phase 1 adds deterministic source-media handling. Phase 2 adds a verified Basic Pitch ONNX CPU baseline. Phase 3 converts immutable evidence into reviewed, deterministic notation and professional local rendering/export while preserving every earlier boundary.
 
 ## Dependency direction
 
@@ -24,6 +24,11 @@ separate persistent Basic Pitch worker
 media workflow controller
     -> asynchronous FFmpeg probe/decode and waveform adapters
     -> Qt Multimedia source playback service
+
+reviewed notation controller
+    -> pure suggestion / quantization / voice / measure stages
+    -> MusicXML 4.0 as canonical renderer input
+    -> pinned native Verovio toolkit and atomic export adapters
 ```
 
 The domain imports neither PySide6 nor filesystem, subprocess, exporter, or model SDK code. Application services depend on protocols for exports. Composition code is the only place that wires concrete adapters to UI and services.
@@ -80,6 +85,32 @@ The optional model environment is not part of default CI or the TimbreScribe whe
 
 The worker stays alive after a terminal result so a second job avoids model reload. A reader thread can set a cooperative cancellation flag while inference runs on the main thread. Because the upstream call itself is not interruptible, the Qt client terminates and then kills the isolated process after bounded timeouts. A cancellation race always discards the result.
 
+## Phase 3 notation and rendering flow
+
+```text
+immutable RawTranscription
+  -> tempo/key suggestions (review only)
+  -> manual NotationSettings snapshot, safe default 4/4
+  -> exact seconds-to-beats normalization
+  -> confidence view / repeated-note merge / grid quantization
+  -> staff and non-overlapping voice allocation
+  -> written/sounding transposition and range diagnostics
+  -> exact measures, rests, cross-bar segments, and ties
+  -> ScoreDocument + MusicXML 4.0
+      -> local Verovio 6.2.1 sanitized SVG pages
+      -> locked QWebEngine desktop preview
+      -> atomic SVG / PNG / vector PDF
+      -> atomic MusicXML / MXL / sounding-pitch MIDI
+```
+
+Every transformation returns a new immutable object and retains `source_note_ids`; raw seconds and model provenance are never overwritten. Exact `Fraction` values close each used voice in every measure. Chord members share one rhythmic slot. Overlaps of unequal duration are assigned to separate voices.
+
+Instrument profiles own written-to-sounding chromatic, diatonic, and octave intervals plus ranges, clefs, staves, and MIDI metadata. MusicXML emits `<transpose>` only for written-pitch views; MIDI always uses sounding pitches. The concert-pitch view suppresses `<transpose>` and spells the sounding pitch directly.
+
+The Verovio Python toolkit is a pinned local runtime dependency. Its output is rejected if it contains declarations, active elements, event handlers, or external links. The production desktop view disables JavaScript, local-file access, remote access, plugins, and full-screen support and exposes no native bridge. CI's `offscreen` platform uses a static non-linking HTML widget to avoid Chromium subprocess instability while exercising the same sanitized SVG.
+
+MXL reads no member onto the filesystem: member count, paths, encryption, individual size, total size, required container entries, and rootfile path are checked before bounded in-memory reads. Visual exports share Verovio SVG; QtSvg paints it to an explicit-DPI image or directly into `QPdfWriter`, preserving vector PDF output.
+
 ## Data ownership
 
 - `RawNoteEvent` is immutable source evidence and retains engine/model provenance.
@@ -90,7 +121,7 @@ The worker stays alive after a terminal result so a second job avoids model relo
 
 ## Rendering decision
 
-Phase 0 uses a small Qt painter-based score preview adapter. It displays real score-domain notes and is not presented as a full notation renderer. A pinned, local Verovio/QWebEngine adapter remains the intended production renderer and will replace this adapter through the same application boundary after its assets and LGPL packaging plan are verified.
+The professional view uses pinned local Verovio 6.2.1 through its Python toolkit and displays only sanitized generated SVG. The Phase 0 Qt painter remains as a compact diagnostic/fallback view, but it is no longer the production engraving surface. See ADR 0005 and the implemented refinement in ADR 0013.
 
 ## Security and reliability boundaries
 
@@ -106,7 +137,10 @@ Phase 0 uses a small Qt painter-based score preview adapter. It displays real sc
 - Optional-model availability is checked without importing inference libraries into the GUI.
 - Basic Pitch stdout remains protocol-only; upstream messages and native-runtime warnings are stderr diagnostics.
 - Raw confidence filtering is non-destructive, and raw MIDI export uses the currently selected view threshold.
+- MXL never extracts untrusted archive paths and applies bounded expansion limits.
+- Verovio output is sanitized before display/export; preview has no script, network, file, plugin, or native-bridge capability.
+- MuseScore discovery is read-only and the external process starts only after an explicit user action.
 
 ## Deferred architecture
 
-Persistent project archives, Verovio assets, score-preview synthesis, full editing/undo, loop/speed playback polish, and packaging are intentionally deferred to their ordered milestones. Phase 2 raw Basic Pitch notes are not yet the editable multi-part score model.
+Persistent project archives, direct score editing/undo, synthesis/playback polish, packaging, and full artifact-specific license manifests are intentionally deferred to their ordered milestones. Phase 3 notation is a reviewed derived snapshot, not yet a command-editable project model.

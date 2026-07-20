@@ -27,16 +27,20 @@ from timbrescribe.application import JobManager, PhaseZeroService, ScorePresenta
 from timbrescribe.domain.errors import TimbreScribeError
 from timbrescribe.domain.transcription import RawTranscription
 from timbrescribe.infrastructure.basic_pitch import BasicPitchAvailability
+from timbrescribe.infrastructure.musescore import MuseScoreAvailability, open_in_musescore
 from timbrescribe.infrastructure.workers.qt_mock_client import QtMockWorkerClient
 from timbrescribe.ui.basic_pitch_workspace import BasicPitchWorkspace
 from timbrescribe.ui.media_workspace import MediaWorkspace
+from timbrescribe.ui.notation_workspace import NotationWorkspace
 from timbrescribe.ui.piano_roll import PianoRollWidget
 from timbrescribe.ui.score_preview import ScorePreviewWidget
+from timbrescribe.ui.verovio_view import VerovioScoreView
 from timbrescribe.ui.waveform import WaveformWidget
 
 if TYPE_CHECKING:
     from timbrescribe.ui.basic_pitch_controller import BasicPitchController
     from timbrescribe.ui.media_controller import MediaWorkflowController
+    from timbrescribe.ui.notation_controller import NotationController
 
 
 def _tr(text: str) -> str:
@@ -52,6 +56,7 @@ class MainWindow(QMainWindow):
         worker: QtMockWorkerClient,
         jobs: JobManager,
         basic_pitch_availability: BasicPitchAvailability,
+        musescore_availability: MuseScoreAvailability,
     ) -> None:
         super().__init__()
         self._service = service
@@ -62,6 +67,8 @@ class MainWindow(QMainWindow):
         self._presentation: ScorePresentation | None = None
         self._media_controller: MediaWorkflowController | None = None
         self._basic_pitch_controller: BasicPitchController | None = None
+        self._notation_controller: NotationController | None = None
+        self._musescore_availability = musescore_availability
 
         self.setWindowTitle(_tr("TimbreScribe · 谱迹 — Basic Pitch + Mock/Test"))
         self.resize(1180, 760)
@@ -85,14 +92,23 @@ class MainWindow(QMainWindow):
         self.cancel_basic_pitch_action.setEnabled(False)
         self.export_raw_midi_action = QAction(_tr("导出原始 MIDI"), self)
         self.export_raw_midi_action.setEnabled(False)
+        self.export_mxl_action = QAction(_tr("导出压缩 MusicXML (MXL)"), self)
+        self.export_svg_action = QAction(_tr("导出 SVG"), self)
+        self.export_png_action = QAction(_tr("导出 PNG"), self)
+        self.export_pdf_action = QAction(_tr("导出矢量 PDF"), self)
+        self.open_musescore_action = QAction(_tr("在 MuseScore 中打开"), self)
+        self.open_musescore_action.setToolTip(musescore_availability.diagnostic)
+        self._set_advanced_exports_enabled(False)
 
         self.score_preview = ScorePreviewWidget(self)
+        self.verovio_view = VerovioScoreView(parent=self)
         self.musicxml_preview = QPlainTextEdit(self)
         self.musicxml_preview.setReadOnly(True)
         self.musicxml_preview.setPlaceholderText(_tr("生成后的 MusicXML 4.0 将显示在这里。"))
         self.waveform_view = WaveformWidget(self)
         self.piano_roll_view = PianoRollWidget(self)
         self.tabs = QTabWidget(self)
+        self.verovio_tab_index = self.tabs.addTab(self.verovio_view, _tr("Verovio 乐谱"))
         self.tabs.addTab(self.score_preview, _tr("乐谱"))
         self.tabs.addTab(self.musicxml_preview, _tr("MusicXML"))
         self.waveform_tab_index = self.tabs.addTab(
@@ -107,6 +123,7 @@ class MainWindow(QMainWindow):
 
         self.media_workspace = MediaWorkspace(self)
         self.basic_pitch_workspace = BasicPitchWorkspace(basic_pitch_availability, self)
+        self.notation_workspace = NotationWorkspace(self)
 
         self.scenario_combo = QComboBox(self)
         self.scenario_combo.addItem(_tr("单旋律"), "monophonic")
@@ -175,6 +192,22 @@ class MainWindow(QMainWindow):
         self.basic_pitch_workspace.export_raw_midi_requested.connect(
             self._choose_raw_midi_destination
         )
+        if self._notation_controller is not None:
+            controller.raw_changed.connect(self._notation_controller.set_raw_transcription)
+
+    def attach_notation_controller(self, controller: NotationController) -> None:
+        """Attach the reviewed notation workflow at the composition boundary."""
+
+        if self._notation_controller is not None:
+            raise RuntimeError("A notation controller is already attached")
+        self._notation_controller = controller
+        controller.setParent(self)
+        controller.diagnostic.connect(self._append_diagnostic)
+        controller.status.connect(self.statusBar().showMessage)
+        controller.error.connect(self._show_error)
+        controller.presentation_ready.connect(self._adopt_presentation)
+        if self._basic_pitch_controller is not None:
+            self._basic_pitch_controller.raw_changed.connect(controller.set_raw_transcription)
 
     def _build_toolbar(self) -> None:
         toolbar = QToolBar(_tr("工作台工具"), self)
@@ -187,6 +220,8 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
         toolbar.addAction(self.export_musicxml_action)
         toolbar.addAction(self.export_midi_action)
+        toolbar.addAction(self.export_mxl_action)
+        toolbar.addAction(self.export_pdf_action)
         toolbar.addSeparator()
         toolbar.addAction(self.run_basic_pitch_action)
         toolbar.addAction(self.cancel_basic_pitch_action)
@@ -217,6 +252,12 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, basic_pitch_dock)
         self.tabifyDockWidget(media_dock, basic_pitch_dock)
 
+        notation_dock = QDockWidget(_tr("乐谱整理"), self)
+        notation_dock.setObjectName("notationReviewDock")
+        notation_dock.setWidget(self.notation_workspace)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, notation_dock)
+        self.tabifyDockWidget(media_dock, notation_dock)
+
         inspector_dock = QDockWidget(_tr("乐谱检查器"), self)
         inspector_dock.setObjectName("scoreInspectorDock")
         inspector_dock.setWidget(self.inspector_label)
@@ -233,6 +274,22 @@ class MainWindow(QMainWindow):
         self.cancel_action.triggered.connect(self.cancel_active_job)
         self.export_musicxml_action.triggered.connect(self._choose_musicxml_destination)
         self.export_midi_action.triggered.connect(self._choose_midi_destination)
+        self.export_mxl_action.triggered.connect(lambda: self._choose_visual_destination("mxl"))
+        self.export_svg_action.triggered.connect(lambda: self._choose_visual_destination("svg"))
+        self.export_png_action.triggered.connect(lambda: self._choose_visual_destination("png"))
+        self.export_pdf_action.triggered.connect(lambda: self._choose_visual_destination("pdf"))
+        self.open_musescore_action.triggered.connect(self._choose_musescore_destination)
+        export_menu = self.menuBar().addMenu(_tr("导出"))
+        for action in (
+            self.export_musicxml_action,
+            self.export_midi_action,
+            self.export_mxl_action,
+            self.export_svg_action,
+            self.export_png_action,
+            self.export_pdf_action,
+            self.open_musescore_action,
+        ):
+            export_menu.addAction(action)
         self._worker.progress.connect(self._on_progress)
         self._worker.warning.connect(self._on_warning)
         self._worker.completed.connect(self._on_completed)
@@ -281,6 +338,48 @@ class MainWindow(QMainWindow):
         presentation = self._require_presentation()
         return self._service.export_midi(presentation, destination)
 
+    def export_mxl(self, destination: Path) -> Path:
+        controller = self._require_notation_controller()
+        return controller.service.export_mxl(self._require_presentation(), destination)
+
+    def export_svg(self, destination: Path) -> Path:
+        controller = self._require_notation_controller()
+        return controller.service.export_svg(self._require_presentation(), destination)
+
+    def export_png(self, destination: Path, *, dpi: int = 144) -> Path:
+        controller = self._require_notation_controller()
+        return controller.service.export_png(self._require_presentation(), destination, dpi=dpi)
+
+    def export_pdf(self, destination: Path) -> Path:
+        controller = self._require_notation_controller()
+        return controller.service.export_pdf(self._require_presentation(), destination)
+
+    def _adopt_presentation(self, value: object) -> None:
+        if not isinstance(value, ScorePresentation):
+            return
+        self._presentation = value
+        score = value.project.score
+        self.score_preview.set_score(score)
+        self.musicxml_preview.setPlainText(value.musicxml)
+        self.verovio_view.set_musicxml(value.musicxml)
+        self.inspector_label.setText(
+            _tr(
+                "标题：{title}\n音符：{notes}\n小节：{measures}\n速度：{tempo} BPM\n"
+                "拍号：{beats}/{unit}"
+            ).format(
+                title=score.title,
+                notes=len(score.all_notes),
+                measures=score.measure_count,
+                tempo=score.tempo_bpm,
+                beats=score.beats_per_measure,
+                unit=score.beat_unit,
+            )
+        )
+        self.export_musicxml_action.setEnabled(True)
+        self.export_midi_action.setEnabled(True)
+        self._set_advanced_exports_enabled(True)
+        self.tabs.setCurrentIndex(self.verovio_tab_index)
+
     def _on_progress(self, job_id: str, stage: str, fraction: float) -> None:
         if job_id != self._active_job_id:
             return
@@ -318,8 +417,11 @@ class MainWindow(QMainWindow):
             )
             return
         self._jobs.succeed(raw_value.job_id)
+        if self._notation_controller is not None:
+            self._notation_controller.set_raw_transcription(raw_value)
         self._presentation = presentation
         self.score_preview.set_score(presentation.project.score)
+        self.verovio_view.set_musicxml(presentation.musicxml)
         self.musicxml_preview.setPlainText(presentation.musicxml)
         score = presentation.project.score
         self.inspector_label.setText(
@@ -334,6 +436,7 @@ class MainWindow(QMainWindow):
         )
         self.export_musicxml_action.setEnabled(True)
         self.export_midi_action.setEnabled(True)
+        self._set_advanced_exports_enabled(True)
         self.statusBar().showMessage(_tr("Mock 乐谱已生成；原始事件已保留"), 8_000)
         self._append_diagnostic(
             _tr("作业完成：{notes} 个 Mock/Test 音符").format(notes=len(score.all_notes))
@@ -409,6 +512,40 @@ class MainWindow(QMainWindow):
         if filename:
             self._perform_export(Path(filename), kind="midi")
 
+    def _choose_visual_destination(self, kind: str) -> None:
+        filters = {
+            "mxl": (_tr("导出压缩 MusicXML"), "TimbreScribe.mxl", _tr("MXL (*.mxl)")),
+            "svg": (_tr("导出 SVG"), "TimbreScribe.svg", _tr("SVG (*.svg)")),
+            "png": (_tr("导出 PNG"), "TimbreScribe.png", _tr("PNG (*.png)")),
+            "pdf": (_tr("导出矢量 PDF"), "TimbreScribe.pdf", _tr("PDF (*.pdf)")),
+        }
+        title, suggested, file_filter = filters[kind]
+        filename, _ = QFileDialog.getSaveFileName(self, title, suggested, file_filter)
+        if filename:
+            self._perform_visual_export(Path(filename), kind)
+
+    def _choose_musescore_destination(self) -> None:
+        executable = self._musescore_availability.executable
+        if executable is None:
+            return
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            _tr("导出并在 MuseScore 中打开"),
+            "TimbreScribe.musicxml",
+            _tr("MusicXML (*.musicxml)"),
+        )
+        if not filename:
+            return
+        try:
+            exported = self.export_musicxml(Path(filename))
+            open_in_musescore(executable, exported)
+        except (TimbreScribeError, OSError, ValueError) as exc:
+            self._show_error(
+                _tr("无法在 MuseScore 中打开"),
+                str(exc),
+                _tr("请从 MuseScore 手动打开已导出的 MusicXML。"),
+            )
+
     def _choose_raw_midi_destination(self) -> None:
         controller = self._basic_pitch_controller
         if controller is None:
@@ -451,10 +588,43 @@ class MainWindow(QMainWindow):
             8_000,
         )
 
+    def _perform_visual_export(self, destination: Path, kind: str) -> None:
+        exporters = {
+            "mxl": self.export_mxl,
+            "svg": self.export_svg,
+            "png": self.export_png,
+            "pdf": self.export_pdf,
+        }
+        try:
+            exported = exporters[kind](destination)
+        except (TimbreScribeError, OSError, ValueError) as exc:
+            self._show_error(
+                _tr("导出失败"),
+                str(exc),
+                _tr("请选择可写目录后重试；目标文件不会被部分覆盖。"),
+            )
+            return
+        self.statusBar().showMessage(_tr("已导出：{path}").format(path=exported), 8_000)
+
+    def _set_advanced_exports_enabled(self, enabled: bool) -> None:
+        for action in (
+            self.export_mxl_action,
+            self.export_svg_action,
+            self.export_png_action,
+            self.export_pdf_action,
+        ):
+            action.setEnabled(enabled)
+        self.open_musescore_action.setEnabled(enabled and self._musescore_availability.available)
+
     def _require_presentation(self) -> ScorePresentation:
         if self._presentation is None:
             raise ValueError("No score is available for export")
         return self._presentation
+
+    def _require_notation_controller(self) -> NotationController:
+        if self._notation_controller is None:
+            raise ValueError("Notation services are unavailable")
+        return self._notation_controller
 
     def _show_error(
         self,
