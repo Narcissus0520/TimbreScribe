@@ -70,7 +70,7 @@ class StartCommand(BoundaryModel):
     protocol: Literal[1] = 1
     type: Literal["start"] = "start"
     job_id: str
-    engine_id: Literal["mock", "basic-pitch"] = "mock"
+    engine_id: Literal["mock", "basic-pitch", "muscriptor"] = "mock"
     scenario: Literal["monophonic", "polyphonic"] = "monophonic"
     simulation: Literal["success", "warning", "failure"] = "success"
     result_dir: Path
@@ -83,6 +83,14 @@ class StartCommand(BoundaryModel):
     maximum_frequency_hz: float = Field(default=4_186.01, gt=0)
     minimum_confidence: float = Field(default=0.0, ge=0, le=1)
     include_pitch_bends: bool = False
+    model_variant: Literal["small", "medium"] | None = None
+    model_path: Path | None = None
+    model_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{40}$")
+    model_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    device: Literal["cpu", "cuda"] = "cpu"
+    instrument_conditioning: tuple[str, ...] = ()
+    accepted_terms_version: str | None = None
+    source_rights_confirmed: bool = False
 
     @classmethod
     def basic_pitch(
@@ -113,10 +121,59 @@ class StartCommand(BoundaryModel):
             include_pitch_bends=include_pitch_bends,
         )
 
+    @classmethod
+    def muscriptor(
+        cls,
+        *,
+        job_id: str,
+        result_dir: Path,
+        audio_path: Path,
+        model_variant: Literal["small", "medium"],
+        model_path: Path,
+        model_revision: str,
+        model_sha256: str,
+        device: Literal["cpu", "cuda"],
+        instrument_conditioning: tuple[str, ...],
+        accepted_terms_version: str,
+        source_rights_confirmed: bool,
+    ) -> Self:
+        return cls(
+            job_id=job_id,
+            engine_id="muscriptor",
+            result_dir=result_dir,
+            audio_path=audio_path,
+            model_variant=model_variant,
+            model_path=model_path,
+            model_revision=model_revision,
+            model_sha256=model_sha256,
+            device=device,
+            instrument_conditioning=instrument_conditioning,
+            accepted_terms_version=accepted_terms_version,
+            source_rights_confirmed=source_rights_confirmed,
+        )
+
     @model_validator(mode="after")
     def validate_engine_fields(self) -> Self:
         if self.engine_id == "basic-pitch" and self.audio_path is None:
             raise ValueError("Basic Pitch start commands require audio_path")
+        if self.engine_id == "muscriptor":
+            if self.audio_path is None:
+                raise ValueError("MuScriptor start commands require audio_path")
+            if self.model_path is None or self.model_path.suffix.lower() != ".safetensors":
+                raise ValueError("MuScriptor requires a local safetensors model path")
+            if not all(
+                (
+                    self.model_variant,
+                    self.model_revision,
+                    self.model_sha256,
+                    self.accepted_terms_version,
+                )
+            ):
+                raise ValueError("MuScriptor start commands require pinned model and terms facts")
+            if not self.source_rights_confirmed:
+                raise ValueError("MuScriptor source-media rights must be confirmed")
+            if len(self.instrument_conditioning) != len(set(self.instrument_conditioning)):
+                raise ValueError("MuScriptor instrument conditioning must be unique")
         if self.maximum_frequency_hz <= self.minimum_frequency_hz:
             raise ValueError("Maximum frequency must exceed minimum frequency")
         return self

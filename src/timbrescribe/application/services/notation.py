@@ -5,8 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from timbrescribe.application.services.phase_zero import ScorePresentation
-from timbrescribe.domain.notation import NotationSettings, build_notation
-from timbrescribe.domain.score import ScoreDocument, ScoreProject
+from timbrescribe.domain.notation import (
+    NotationSettings,
+    build_multi_part_notation,
+    build_notation,
+)
+from timbrescribe.domain.score import ScoreDocument, ScoreProject, select_score_parts
 from timbrescribe.domain.transcription import RawTranscription
 from timbrescribe.infrastructure.exporting import MidiExporter, MusicXmlExporter, MxlExporter
 from timbrescribe.infrastructure.rendering import ScoreImageExporter
@@ -32,7 +36,11 @@ class NotationService:
         raw: RawTranscription,
         settings: NotationSettings,
     ) -> ScorePresentation:
-        draft = build_notation(raw, settings)
+        draft = (
+            build_multi_part_notation(raw, settings)
+            if raw.engine_id == "muscriptor"
+            else build_notation(raw, settings)
+        )
         project = ScoreProject(raw, draft.score)
         document = self._musicxml.render(draft.score)
         diagnostics = tuple(f"{item.code}: {item.message}" for item in draft.diagnostics)
@@ -77,3 +85,36 @@ class NotationService:
 
     def export_midi(self, presentation: ScorePresentation, destination: Path) -> Path:
         return self._midi.export(presentation.project.score, destination)
+
+    def project_part(
+        self,
+        presentation: ScorePresentation,
+        part_id: str,
+    ) -> ScorePresentation:
+        """Render an individual-part view without mutating the total score."""
+
+        score = select_score_parts(presentation.project.score, (part_id,))
+        return ScorePresentation(
+            ScoreProject(presentation.project.raw_transcription, score),
+            self._musicxml.render(score),
+            presentation.diagnostics,
+            presentation.notation_settings,
+        )
+
+    def export_part_musicxml(
+        self,
+        presentation: ScorePresentation,
+        part_id: str,
+        destination: Path,
+    ) -> Path:
+        score = select_score_parts(presentation.project.score, (part_id,))
+        return self._musicxml.export(score, destination)
+
+    def export_part_midi(
+        self,
+        presentation: ScorePresentation,
+        part_id: str,
+        destination: Path,
+    ) -> Path:
+        score = select_score_parts(presentation.project.score, (part_id,))
+        return self._midi.export(score, destination)

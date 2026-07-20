@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 0 proves the smallest honest score path. Phase 1 adds deterministic source-media handling. Phase 2 adds a verified Basic Pitch ONNX CPU baseline. Phase 3 converts immutable evidence into reviewed notation and professional local rendering/export. Phase 4 adds command editing and project persistence while preserving every earlier boundary.
+Phase 0 proves the smallest honest score path. Phase 1 adds deterministic source-media handling. Phase 2 adds a verified Basic Pitch ONNX CPU baseline. Phase 3 converts immutable evidence into reviewed notation and professional local rendering/export. Phase 4 adds command editing and project persistence. Phase 5 adds multi-part score views and a gated, isolated MuScriptor adapter while preserving every earlier boundary.
 
 ## Dependency direction
 
@@ -34,6 +34,11 @@ editing controller
     -> immutable physical-time edited events and command stack
     -> project persistence ports
         -> bounded versioned archive and recovery adapters
+
+optional MuScriptor workspace
+    -> exact-revision acceptance + operating-system credential ports
+    -> isolated verified installer and inference QProcesses
+    -> multi-part notation mapping and total/part projections
 ```
 
 The domain imports neither PySide6 nor filesystem, subprocess, exporter, or model SDK code. Application services depend on protocols for exports. Composition code is the only place that wires concrete adapters to UI and services.
@@ -145,6 +150,32 @@ Autosave targets only the managed recovery directory and records project ID, tim
 
 The playback transport uses source media as the clock when available and drives the editable score playhead from millisecond position signals. Score-only projects use a deterministic local preview clock; Phase 6 owns synthesizer/audio-timbre refinement.
 
+## Phase 5 multi-part and MuScriptor flow
+
+```text
+exact model manifest + selected Small/Medium
+  -> visible non-commercial terms review and exact-revision acceptance
+  -> token read from the OS credential service only by the installer client
+  -> isolated installer downloads pinned safetensors + config at immutable revision
+  -> independent size / SHA-256 / config verification
+  -> atomic promotion under the managed application-data model root
+
+decoded local audio + per-run media-rights confirmation
+  -> CPU/CUDA RAM/VRAM/disk preflight with explicit fallback guidance
+  -> protocol-v1 isolated MuScriptor worker using a verified local path
+  -> immutable raw onset/offset/pitch/instrument-label evidence
+  -> stable label grouping and conservative editable instrument profiles
+  -> multi-part ScoreDocument and one canonical MusicXML snapshot
+      -> total-score or individual-part display projection
+      -> total-score and per-part MusicXML/MIDI export
+```
+
+The GUI imports neither MuScriptor nor Torch. The installer and inference adapters are separate because only installation needs a network credential; inference removes `HF_TOKEN` from its process environment and runs offline. The worker never receives a bare model size or repository name as permission to download. It checks the local `.safetensors` file, expected config values, engine version, and hash again before loading.
+
+The model manifest treats code and weights separately. Small and Medium have independent immutable revisions, hashes, terms versions, and resource requirements. Medium remains unavailable until Small verifies locally. Acceptance records are non-secret and live in application data; tokens live in the OS credential store; neither is part of a `.timbrescribe` project. A source-rights checkbox is deliberately per run and is recorded in the immutable run settings/artifact.
+
+Each distinct engine label creates a deterministic part ID. Known labels map to built-in editable notation profiles; an unknown or ambiguous future label stays visible and uses a safe generic profile until the user changes it through an undoable part-instrument command. Raw labels and note evidence are never rewritten. The editing workspace filters one part for navigation while the controller retains the full score, so changing the view cannot accidentally turn a total-score export into a part export.
+
 ## Data ownership
 
 - `RawNoteEvent` is immutable source evidence and retains engine/model provenance.
@@ -153,6 +184,8 @@ The playback transport uses source media as the clock when available and drives 
 - `ScoreDocument` contains deterministic notation state and does not mutate the raw events.
 - `EditedNoteEvent` is the exact physical-time correction layer; user changes never replace raw events.
 - `EditingProject` is an immutable versioned snapshot; the application command stack owns history and dirty state.
+- `MuscriptorSettingsSnapshot` records model variant, device, conditioning, accepted terms version, and per-run source-rights confirmation without a credential.
+- Engine labels are immutable raw evidence; part instrument profiles are user-editable derived score state.
 - MusicXML and MIDI are derived artifacts from one score snapshot.
 
 ## Rendering decision
@@ -179,7 +212,11 @@ The professional view uses pinned local Verovio 6.2.1 through its Python toolkit
 - Project archives are never extracted; loaders reject unsafe paths, links, encryption, duplicates, abnormal expansion, unknown archive versions, and inconsistent hashes or derived artifacts.
 - Autosave never targets the primary project path, and a failed load cannot partially replace the open session.
 - Background transcription/save results use project revision tokens so stale work cannot overwrite later edits or falsely clear dirty state.
+- Gated model installation performs no network access before exact-revision acceptance and token retrieval; inference performs no network access.
+- Tokens are accepted only in Hugging Face token form, stored through the OS credential service, passed only in the installer environment, and redacted from diagnostics.
+- MuScriptor installation accepts only pinned safetensors/config files, verifies size/hash/config, removes cache metadata, and atomically promotes a managed directory.
+- MuScriptor crash, cancellation, protocol failure, and out-of-memory leave the active project and verified model state unchanged.
 
 ## Deferred architecture
 
-Multi-part model inference, advanced voice/percussion notation, synthesized playback polish, assistant providers, packaging, and full artifact-specific license manifests remain deferred to their ordered milestones.
+Advanced voice/percussion notation, synthesized playback polish, assistant providers, packaging, and full artifact-specific license manifests remain deferred to their ordered milestones. Real MuScriptor Small inference acceptance remains gated on explicit user terms acceptance and approved local test material.

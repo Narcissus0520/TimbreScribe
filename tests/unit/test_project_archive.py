@@ -8,10 +8,14 @@ from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 import pytest
-from tests.factories import make_raw_transcription
+from tests.factories import make_muscriptor_raw_transcription, make_raw_transcription
 
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
-from timbrescribe.domain.notation import NotationSettings, build_notation
+from timbrescribe.domain.notation import (
+    NotationSettings,
+    build_multi_part_notation,
+    build_notation,
+)
 from timbrescribe.domain.project import create_editing_project
 from timbrescribe.infrastructure.persistence import (
     ProjectArchiveLimits,
@@ -56,6 +60,35 @@ def test_project_archive_round_trip_is_deterministic_and_keeps_stable_ids(tmp_pa
             "score/current.musicxml",
             "preview/current.mid",
         }.issubset(archive.namelist())
+
+
+def test_multi_part_model_provenance_round_trips_without_credentials(tmp_path: Path) -> None:
+    raw = make_muscriptor_raw_transcription()
+    settings = NotationSettings()
+    score = build_multi_part_notation(raw, settings).score
+    project = create_editing_project(
+        raw,
+        score,
+        settings,
+        project_id="multi-part-project",
+        now=datetime(2026, 1, 2, 3, 4, 5, tzinfo=UTC),
+    )
+    store = ProjectArchiveStore()
+    path = store.save(project, tmp_path / "multi-part.timbrescribe")
+
+    loaded = store.load(path).project
+    assert loaded == project
+    assert len(loaded.score.parts) == 3
+    assert loaded.raw_transcription.muscriptor_settings is not None
+    assert loaded.raw_transcription.muscriptor_settings.source_rights_confirmed
+    with ZipFile(path) as archive:
+        json_content = "\n".join(
+            archive.read(name).decode("utf-8")
+            for name in archive.namelist()
+            if name.endswith(".json")
+        )
+    assert "hf_" not in json_content
+    assert "token" not in json_content.lower()
 
 
 def test_archive_rejects_traversal_duplicates_and_hash_mismatch(tmp_path: Path) -> None:

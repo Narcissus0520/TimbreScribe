@@ -26,6 +26,7 @@ from timbrescribe.domain.score import (
 )
 from timbrescribe.domain.transcription import (
     EngineRunProvenance,
+    MuscriptorSettingsSnapshot,
     RawNoteEvent,
     RawTranscription,
     TranscriptionSettingsSnapshot,
@@ -124,6 +125,9 @@ def encode_raw_descriptor(raw: RawTranscription) -> JsonObject:
         "source_audio_sha256": raw.source_audio_sha256,
         "settings": asdict(raw.settings) if raw.settings is not None else None,
         "provenance": asdict(raw.provenance) if raw.provenance is not None else None,
+        "muscriptor_settings": (
+            asdict(raw.muscriptor_settings) if raw.muscriptor_settings is not None else None
+        ),
     }
 
 
@@ -166,6 +170,7 @@ def decode_raw(descriptor: JsonObject, events_value: JsonObject) -> RawTranscrip
         )
     settings_value = descriptor.get("settings")
     provenance_value = descriptor.get("provenance")
+    muscriptor_settings_value = descriptor.get("muscriptor_settings")
     return RawTranscription(
         schema_version=_integer(descriptor.get("schema_version"), "raw schema version"),
         job_id=_string(descriptor.get("job_id"), "job ID"),
@@ -190,6 +195,34 @@ def decode_raw(descriptor: JsonObject, events_value: JsonObject) -> RawTranscrip
             EngineRunProvenance(**_object(provenance_value, "engine provenance"))
             if provenance_value is not None
             else None
+        ),
+        muscriptor_settings=(
+            _decode_muscriptor_settings(muscriptor_settings_value)
+            if muscriptor_settings_value is not None
+            else None
+        ),
+    )
+
+
+def _decode_muscriptor_settings(value: object) -> MuscriptorSettingsSnapshot:
+    descriptor = _object(value, "MuScriptor settings")
+    return MuscriptorSettingsSnapshot(
+        model_variant=_string(descriptor.get("model_variant"), "MuScriptor model variant"),
+        device=_string(descriptor.get("device"), "MuScriptor device"),
+        instrument_conditioning=tuple(
+            _string(item, "instrument conditioning")
+            for item in _list(
+                descriptor.get("instrument_conditioning"),
+                "instrument conditioning",
+            )
+        ),
+        accepted_terms_version=_string(
+            descriptor.get("accepted_terms_version"),
+            "accepted terms version",
+        ),
+        source_rights_confirmed=_boolean(
+            descriptor.get("source_rights_confirmed"),
+            "source rights confirmation",
         ),
     )
 

@@ -2,6 +2,7 @@
 
 from timbrescribe.domain.transcription.models import (
     EngineRunProvenance,
+    MuscriptorSettingsSnapshot,
     RawNoteEvent,
     RawTranscription,
     TranscriptionSettingsSnapshot,
@@ -9,6 +10,7 @@ from timbrescribe.domain.transcription.models import (
 
 __all__ = [
     "EngineRunProvenance",
+    "MuscriptorSettingsSnapshot",
     "RawNoteEvent",
     "RawTranscription",
     "TranscriptionSettingsSnapshot",

@@ -57,6 +57,14 @@ class EngineRunRecord(BoundaryModel):
     inference_seconds: float = Field(ge=0)
 
 
+class MuscriptorSettingsRecord(BoundaryModel):
+    model_variant: Literal["small", "medium"]
+    device: Literal["cpu", "cuda"]
+    instrument_conditioning: tuple[str, ...] = ()
+    accepted_terms_version: str = Field(min_length=1)
+    source_rights_confirmed: Literal[True]
+
+
 class TranscriptionArtifact(BoundaryModel):
     schema_version: Literal[1] = 1
     job_id: str = Field(min_length=1)
@@ -70,10 +78,13 @@ class TranscriptionArtifact(BoundaryModel):
     source_audio_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     settings: TranscriptionSettingsRecord | None = None
     run: EngineRunRecord | None = None
+    muscriptor_settings: MuscriptorSettingsRecord | None = None
 
     @model_validator(mode="after")
     def validate_unique_notes(self) -> Self:
         note_ids = [note.id for note in self.notes]
         if len(note_ids) != len(set(note_ids)):
             raise ValueError("Raw note IDs must be unique")
+        if self.engine_id == "muscriptor" and self.muscriptor_settings is None:
+            raise ValueError("MuScriptor artifacts require gated-run settings")
         return self

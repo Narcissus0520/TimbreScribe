@@ -8,7 +8,11 @@ from datetime import UTC, datetime
 from fractions import Fraction
 from typing import Protocol
 
-from timbrescribe.domain.notation import NotationSettings, QuantizationSettings
+from timbrescribe.domain.notation import (
+    NotationSettings,
+    QuantizationSettings,
+    get_instrument_profile,
+)
 from timbrescribe.domain.project import EditedNoteEvent, EditingProject, derive_score
 
 
@@ -170,6 +174,60 @@ class AssignNotesCommand:
             for note in project.edited_events
         )
         return _replace_content(project, events=result)
+
+
+@dataclass(frozen=True, slots=True)
+class ChangePartInstrumentCommand:
+    """Replace an engine-suggested part profile without changing raw evidence."""
+
+    part_id: str
+    profile_id: str
+    description: str = "Change part instrument profile"
+
+    def __post_init__(self) -> None:
+        if not self.part_id or not self.profile_id:
+            raise ValueError("Part and instrument profile IDs are required")
+
+    @property
+    def affected_entity_ids(self) -> tuple[str, ...]:
+        return (self.part_id,)
+
+    def apply(self, project: EditingProject) -> EditingProject:
+        profile = get_instrument_profile(self.profile_id)
+        target = next(
+            (part for part in project.baseline_score.parts if part.id == self.part_id),
+            None,
+        )
+        if target is None:
+            raise ValueError(f"Unknown part: {self.part_id}")
+        if target.instrument_profile == profile:
+            raise ValueError("Part already uses the selected instrument profile")
+        channel = _instrument_channel(project, self.part_id, percussion=profile.percussion)
+        updated_part = replace(
+            target,
+            name=profile.display_name,
+            instrument_name=profile.display_name,
+            midi_program=profile.midi_program,
+            midi_channel=channel,
+            instrument_profile=profile,
+            clef=profile.preferred_clef,
+            staff_count=profile.staff_count,
+        )
+        baseline = replace(
+            project.baseline_score,
+            parts=tuple(
+                updated_part if part.id == self.part_id else part
+                for part in project.baseline_score.parts
+            ),
+        )
+        events = tuple(
+            replace(event, staff=profile.staff_count, edited_by_user=True)
+            if event.part_id == self.part_id and event.staff > profile.staff_count
+            else event
+            for event in project.edited_events
+        )
+        candidate = replace(project, baseline_score=baseline, edited_events=events)
+        return replace(candidate, score=derive_score(candidate))
 
 
 @dataclass(frozen=True, slots=True)
@@ -403,3 +461,22 @@ def _selected(project: EditingProject, note_ids: tuple[str, ...]) -> tuple[Edite
     if missing:
         raise ValueError(f"Unknown note IDs: {', '.join(sorted(missing))}")
     return found
+
+
+def _instrument_channel(
+    project: EditingProject,
+    part_id: str,
+    *,
+    percussion: bool,
+) -> int:
+    if percussion:
+        return 9
+    target = next(part for part in project.baseline_score.parts if part.id == part_id)
+    if target.midi_channel != 9:
+        return target.midi_channel
+    used = {
+        part.midi_channel
+        for part in project.baseline_score.parts
+        if part.id != part_id and part.midi_channel != 9
+    }
+    return next((channel for channel in range(16) if channel not in used and channel != 9), 0)

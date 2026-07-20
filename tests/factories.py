@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from timbrescribe.domain.transcription import RawNoteEvent, RawTranscription
+from dataclasses import replace
+
+from timbrescribe.domain.transcription import (
+    MuscriptorSettingsSnapshot,
+    RawNoteEvent,
+    RawTranscription,
+)
 
 
 def make_raw_transcription(
@@ -40,4 +46,41 @@ def make_raw_transcription(
         model_id=None,
         model_revision=None,
         notes=notes,
+    )
+
+
+def make_muscriptor_raw_transcription() -> RawTranscription:
+    """Build model-free multi-instrument evidence for domain and GUI tests."""
+
+    raw = make_raw_transcription(note_specs=((60, 0.0, 0.5), (55, 0.0, 1.0), (64, 1.0, 1.5)))
+    labels = ("acoustic_piano", "electric_bass", "provider_future_instrument")
+    model_id = "MuScriptor/muscriptor-small"
+    revision = "8c127f603b807520fa465c838e9bfee8a91ada4e"
+    return replace(
+        raw,
+        engine_id="muscriptor",
+        engine_version="0.2.1",
+        model_id=model_id,
+        model_revision=revision,
+        muscriptor_settings=MuscriptorSettingsSnapshot(
+            model_variant="small",
+            device="cpu",
+            instrument_conditioning=(),
+            accepted_terms_version=f"{model_id}@{revision}",
+            source_rights_confirmed=True,
+        ),
+        notes=tuple(
+            replace(
+                note,
+                instrument_label=labels[index],
+                source_engine="muscriptor",
+                source_engine_version="0.2.1",
+                source_model_id=model_id,
+                source_model_revision=revision,
+                confidence=None,
+                midi_program=None,
+                channel=None,
+            )
+            for index, note in enumerate(raw.notes)
+        ),
     )

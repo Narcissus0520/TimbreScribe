@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "engine": {
+    "engine_id": "muscriptor",
+    "display_name": "MuScriptor (Experimental / Non-Commercial)",
+    "engine_version": "0.2.1",
+    "runtime_distribution": "muscriptor",
+    "runtime_wheel_sha256": "eeaf6dc7b3c7d28480ef20f4c494a727c890865d36f261d76dd885ea1172c315",
+    "supported_platforms": ["windows-x64"],
+    "commercial_use_status": "non-commercial",
+    "license_summary": "MIT code; gated CC BY-NC 4.0 model weights plus provider conditions",
+    "capabilities": {
+      "supported_input_modes": ["decoded-audio-range"],
+      "supports_polyphony": true,
+      "supports_multi_instrument": true,
+      "supports_instrument_conditioning": true,
+      "supports_drums": true,
+      "supports_pitch_bend": false,
+      "supports_confidence": false,
+      "requires_model": true,
+      "requires_network_for_install": true
+    },
+    "resource_requirements": {
+      "minimum_ram_mb": 4096,
+      "recommended_vram_mb": 4096,
+      "minimum_disk_bytes": 411888600,
+      "guidance_basis": "Conservative TimbreScribe preflight floor; upstream publishes no fixed minimum"
+    }
+  },
+  "models": [
+    {
+      "model_id": "MuScriptor/muscriptor-small",
+      "variant": "small",
+      "engine_id": "muscriptor",
+      "engine_version": "0.2.1",
+      "source": "MuScriptor/muscriptor-small",
+      "revision": "8c127f603b807520fa465c838e9bfee8a91ada4e",
+      "filename": "model.safetensors",
+      "sha256": "bbd482c786b895cf7d8f44185073d951adae2ebb8a66f82ca84cd1f84569549c",
+      "size_bytes": 411888600,
+      "license_id": "CC-BY-NC-4.0-plus-provider-conditions",
+      "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "terms_url": "https://huggingface.co/MuScriptor/muscriptor-small",
+      "terms_version": "MuScriptor/muscriptor-small@8c127f603b807520fa465c838e9bfee8a91ada4e",
+      "redistributable": false,
+      "commercial_use": false,
+      "gated": true,
+      "requirements": {
+        "minimum_ram_mb": 4096,
+        "recommended_vram_mb": 4096,
+        "minimum_disk_bytes": 823777200,
+        "guidance_basis": "Two-times weight-size disk reserve and conservative local runtime floor"
+      }
+    },
+    {
+      "model_id": "MuScriptor/muscriptor-medium",
+      "variant": "medium",
+      "engine_id": "muscriptor",
+      "engine_version": "0.2.1",
+      "source": "MuScriptor/muscriptor-medium",
+      "revision": "f32236969308476e01fd3aae67357de5feb05a2d",
+      "filename": "model.safetensors",
+      "sha256": "ac80adbdf85d87231735fd948af7013441c0afced316c4e9067fd5d8a7fb97ec",
+      "size_bytes": 1228144472,
+      "license_id": "CC-BY-NC-4.0-plus-provider-conditions",
+      "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "terms_url": "https://huggingface.co/MuScriptor/muscriptor-medium",
+      "terms_version": "MuScriptor/muscriptor-medium@f32236969308476e01fd3aae67357de5feb05a2d",
+      "redistributable": false,
+      "commercial_use": false,
+      "gated": true,
+      "requirements": {
+        "minimum_ram_mb": 8192,
+        "recommended_vram_mb": 6144,
+        "minimum_disk_bytes": 2456288944,
+        "guidance_basis": "Two-times weight-size disk reserve and conservative local runtime floor"
+      }
+    }
+  ]
+}

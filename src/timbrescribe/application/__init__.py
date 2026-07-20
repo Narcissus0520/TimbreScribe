@@ -3,6 +3,7 @@
 from timbrescribe.application.editing import (
     AddNoteCommand,
     AssignNotesCommand,
+    ChangePartInstrumentCommand,
     CompositeEditCommand,
     DeleteNotesCommand,
     EditHistoryMetadata,
@@ -21,6 +22,7 @@ from timbrescribe.application.services.project import ProjectService
 __all__ = [
     "AddNoteCommand",
     "AssignNotesCommand",
+    "ChangePartInstrumentCommand",
     "CompositeEditCommand",
     "DeleteNotesCommand",
     "EditHistoryMetadata",

@@ -76,29 +76,14 @@ def build_notation(
     """Run explicit deterministic notation stages and preserve raw provenance IDs."""
 
     profile = get_instrument_profile(settings.instrument_profile_id)
-    quantized, quantization_diagnostics = quantize_transcription(
+    part, diagnostics = build_notation_part(
         raw,
-        tempo_bpm=settings.tempo_bpm,
-        settings=settings.quantization,
-    )
-    allocated = _allocate_voices(quantized, profile.staff_count)
-    notes, notation_diagnostics = _score_notes(
-        allocated,
+        settings,
         profile=profile,
-        concert_pitch_view=settings.concert_pitch_view,
-        key_fifths=settings.key_fifths,
-    )
-    part = Part(
-        id="part-1",
-        name=profile.display_name,
-        instrument_name=profile.display_name,
-        midi_program=profile.midi_program,
+        part_id="part-1",
+        part_name=profile.display_name,
         midi_channel=0,
-        notes=notes,
-        instrument_profile=profile,
-        clef=profile.preferred_clef,
-        staff_count=profile.staff_count,
-        concert_pitch_view=settings.concert_pitch_view,
+        midi_program=profile.midi_program,
     )
     score = ScoreDocument(
         schema_version=1,
@@ -116,6 +101,46 @@ def build_notation(
         ),
         key_map=KeyMap((KeyEvent(Fraction(0), settings.key_fifths, settings.key_mode),)),
     )
+    return NotationDraft(score, construct_measures(score), diagnostics)
+
+
+def build_notation_part(
+    raw: RawTranscription,
+    settings: NotationSettings,
+    *,
+    profile: InstrumentProfile,
+    part_id: str,
+    part_name: str,
+    midi_channel: int,
+    midi_program: int,
+) -> tuple[Part, tuple[NotationDiagnostic, ...]]:
+    """Build one deterministic part while preserving raw-note provenance."""
+
+    quantized, quantization_diagnostics = quantize_transcription(
+        raw,
+        tempo_bpm=settings.tempo_bpm,
+        settings=settings.quantization,
+    )
+    allocated = _allocate_voices(quantized, profile.staff_count)
+    notes, notation_diagnostics = _score_notes(
+        allocated,
+        profile=profile,
+        part_id=part_id,
+        concert_pitch_view=settings.concert_pitch_view,
+        key_fifths=settings.key_fifths,
+    )
+    part = Part(
+        id=part_id,
+        name=part_name,
+        instrument_name=part_name,
+        midi_program=midi_program,
+        midi_channel=midi_channel,
+        notes=notes,
+        instrument_profile=profile,
+        clef=profile.preferred_clef,
+        staff_count=profile.staff_count,
+        concert_pitch_view=settings.concert_pitch_view,
+    )
     diagnostics = (*quantization_diagnostics, *notation_diagnostics)
     if not notes:
         diagnostics = (
@@ -126,7 +151,7 @@ def build_notation(
                 "The current confidence filter excludes every raw note",
             ),
         )
-    return NotationDraft(score, construct_measures(score), tuple(diagnostics))
+    return part, tuple(diagnostics)
 
 
 def _allocate_voices(
@@ -178,6 +203,7 @@ def _score_notes(
     allocated: tuple[_AllocatedEvent, ...],
     *,
     profile: InstrumentProfile,
+    part_id: str,
     concert_pitch_view: bool,
     key_fifths: int,
 ) -> tuple[tuple[ScoreNote, ...], tuple[NotationDiagnostic, ...]]:
@@ -221,7 +247,7 @@ def _score_notes(
             ScoreNote(
                 id=f"score-{event.id}",
                 source_note_ids=event.source_note_ids,
-                part_id="part-1",
+                part_id=part_id,
                 staff=allocated_event.staff,
                 voice=allocated_event.voice,
                 written_pitch=spell_pitch(written_midi, prefer_flats=key_fifths < 0),

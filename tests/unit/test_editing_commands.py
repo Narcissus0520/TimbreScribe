@@ -10,6 +10,7 @@ from tests.factories import make_raw_transcription
 from timbrescribe.application import (
     AddNoteCommand,
     AssignNotesCommand,
+    ChangePartInstrumentCommand,
     DeleteNotesCommand,
     EditingSession,
     MoveNotesCommand,
@@ -112,6 +113,25 @@ def test_stale_background_command_cannot_overwrite_later_edit() -> None:
 
     assert session.execute_if_current(token, DeleteNotesCommand((note_id,))) is None
     assert note_id in {note.id for note in session.project.edited_events}
+
+
+def test_part_instrument_mapping_is_editable_and_undoable() -> None:
+    session = EditingSession(_project(), saved=True)  # type: ignore[arg-type]
+    original = session.project
+
+    changed = session.execute(ChangePartInstrumentCommand("part-1", "flute"))
+
+    part = changed.score.parts[0]
+    assert part.instrument_profile is not None
+    assert part.instrument_profile.id == "flute"
+    assert part.name == "Flute"
+    assert part.staff_count == 1
+    assert all(note.staff == 1 for note in changed.edited_events)
+    assert changed.raw_transcription is original.raw_transcription
+    assert session.undo().content_identity == original.content_identity
+
+    metadata_only = session.execute(ChangePartInstrumentCommand("part-1", "electric-piano"))
+    assert all(not event.edited_by_user for event in metadata_only.edited_events)
 
 
 def test_raw_vs_edited_comparison_preserves_immutable_evidence() -> None:

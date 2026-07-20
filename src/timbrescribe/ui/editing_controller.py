@@ -14,6 +14,7 @@ from PySide6.QtCore import QObject, QThread, QTimer, Signal
 from timbrescribe.application import (
     AddNoteCommand,
     AssignNotesCommand,
+    ChangePartInstrumentCommand,
     CompositeEditCommand,
     DeleteNotesCommand,
     EditingSession,
@@ -170,7 +171,10 @@ class EditingController(QObject):
 
     @property
     def io_busy(self) -> bool:
-        return self._io_thread is not None and self._io_thread.isRunning()
+        # A QThread can be scheduled but not yet report ``isRunning()``.  Keep the
+        # controller busy for the whole ownership interval so callers cannot
+        # mistake that startup window for completed I/O.
+        return self._io_thread is not None
 
     def version_token(self) -> ProjectVersionToken | None:
         return self._session.version_token() if self._session is not None else None
@@ -346,6 +350,11 @@ class EditingController(QObject):
         )
         self._workspace.requantize_requested.connect(self._requantize)
         self._workspace.properties_requested.connect(self._apply_properties)
+        self._workspace.part_profile_requested.connect(
+            lambda part_id, profile_id: self._execute(
+                ChangePartInstrumentCommand(part_id, profile_id)
+            )
+        )
         self._workspace.play_requested.connect(self._transport.play_synchronized)
         self._workspace.pause_requested.connect(self._transport.pause_synchronized)
         self._workspace.stop_requested.connect(self._transport.stop_synchronized)
@@ -359,7 +368,11 @@ class EditingController(QObject):
             return
         session = self._require_session()
         project = session.project
-        part = project.score.parts[0]
+        selected_part_id = self._workspace.selected_part_id
+        part = next(
+            (candidate for candidate in project.score.parts if candidate.id == selected_part_id),
+            project.score.parts[0],
+        )
         seconds_per_beat = Fraction(60, project.notation_settings.tempo_bpm)
         duration = project.notation_settings.quantization.grid_resolution
         voice = 1

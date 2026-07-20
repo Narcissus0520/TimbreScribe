@@ -31,6 +31,31 @@ class TranscriptionSettingsSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class MuscriptorSettingsSnapshot:
+    """Rights, model, device, and conditioning facts for one gated run."""
+
+    model_variant: str
+    device: str
+    instrument_conditioning: tuple[str, ...]
+    accepted_terms_version: str
+    source_rights_confirmed: bool
+
+    def __post_init__(self) -> None:
+        if self.model_variant not in {"small", "medium"}:
+            raise ValueError("MuScriptor supports Small or Medium")
+        if self.device not in {"cpu", "cuda"}:
+            raise ValueError("MuScriptor device must be CPU or CUDA")
+        if not self.accepted_terms_version or not self.source_rights_confirmed:
+            raise ValueError("MuScriptor terms and source-media rights must be confirmed")
+        if not isinstance(self.instrument_conditioning, tuple) or not all(
+            isinstance(value, str) and value for value in self.instrument_conditioning
+        ):
+            raise ValueError("Instrument conditioning must be a tuple of non-empty labels")
+        if len(self.instrument_conditioning) != len(set(self.instrument_conditioning)):
+            raise ValueError("Instrument conditioning values must be unique")
+
+
+@dataclass(frozen=True, slots=True)
 class EngineRunProvenance:
     """Runtime/model facts captured by the isolated worker."""
 
@@ -109,6 +134,7 @@ class RawTranscription:
     source_audio_sha256: str | None = None
     settings: TranscriptionSettingsSnapshot | None = None
     provenance: EngineRunProvenance | None = None
+    muscriptor_settings: MuscriptorSettingsSnapshot | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -125,6 +151,8 @@ class RawTranscription:
             and _SHA256.fullmatch(self.source_audio_sha256) is None
         ):
             raise ValueError("Source audio SHA-256 must contain 64 hexadecimal characters")
+        if self.engine_id == "muscriptor" and self.muscriptor_settings is None:
+            raise ValueError("MuScriptor evidence requires its gated-run settings")
 
     def notes_at_confidence(self, minimum: float) -> tuple[RawNoteEvent, ...]:
         """Filter a view of raw evidence without mutating or discarding it."""
