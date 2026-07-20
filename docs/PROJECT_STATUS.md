@@ -31,7 +31,7 @@ Phase 4 — Editing Workspace and Project Persistence (`v0.5.0`).
 
 ## In progress
 
-- Phase 4 full quality gates, benchmark record, PR review, Windows CI, and merge.
+- Phase 4 PR #5 review and merge after successful local and Windows CI gates.
 
 ## Known issues / blockers
 
@@ -64,6 +64,7 @@ Phase 4 — Editing Workspace and Project Persistence (`v0.5.0`).
 | `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked environment |
 | `uv build --wheel` | Passed: `timbrescribe-0.5.0-py3-none-any.whl`, 98 files, persistence included, no ONNX/EXE/DLL |
 | Phase 3 GitHub Actions Windows CI | Passed: run 29775358604 completed Ruff formatting/lint, strict Mypy, official XSD, and 130-test gates |
+| Phase 4 GitHub Actions Windows CI | Passed: run 29778827812 completed Ruff formatting/lint, strict Mypy, official XSD, and 150-test gates |
 | MuseScore availability | Correctly reported unavailable on this machine; action disabled; external round-trip pending |
 
 ## Next recommended task
