@@ -1,0 +1,112 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "timbrescribe"
+version = "0.1.0"
+description = "Local-first desktop music transcription workbench"
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = "Apache-2.0"
+authors = [
+  { name = "TimbreScribe contributors" },
+]
+keywords = ["music", "transcription", "musicxml", "midi", "pyside6"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Win32 (MS Windows)",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+dependencies = [
+  "mido>=1.3.3,<2",
+  "pydantic>=2.10,<3",
+  "pyside6>=6.8,<7",
+]
+
+[project.urls]
+Homepage = "https://github.com/Narcissus0520/TimbreScribe"
+Repository = "https://github.com/Narcissus0520/TimbreScribe"
+Issues = "https://github.com/Narcissus0520/TimbreScribe/issues"
+
+[project.gui-scripts]
+timbrescribe = "timbrescribe.__main__:main"
+
+[project.scripts]
+timbrescribe-mock-worker = "timbrescribe.workers.mock:main"
+
+[dependency-groups]
+dev = [
+  "mypy>=1.15,<2",
+  "pip-audit>=2.8,<4",
+  "pytest>=8.3,<10",
+  "pytest-cov>=6,<8",
+  "pytest-qt>=4.4,<5",
+  "ruff>=0.11,<1",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/timbrescribe"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "PTH", "RUF", "SIM", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+"src/timbrescribe/ui/**/*.py" = ["RUF001"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src/timbrescribe"]
+pretty = true
+show_error_codes = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["mido", "mido.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.3"
+testpaths = ["tests"]
+addopts = [
+  "-ra",
+  "--strict-config",
+  "--strict-markers",
+  "--cov=src/timbrescribe",
+  "--cov-branch",
+  "--cov-report=term-missing",
+  "--cov-fail-under=75",
+]
+markers = [
+  "model: opt-in test requiring an installed model",
+  "packaging: opt-in Windows packaging test",
+]
+qt_api = "pyside6"
+
+[tool.coverage.run]
+branch = true
+source = ["timbrescribe"]
+
+[tool.coverage.report]
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+  "raise NotImplementedError",
+]
+show_missing = true
