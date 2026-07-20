@@ -76,3 +76,28 @@ def test_playback_service_bridges_transport_state(qtbot: QtBot, tmp_path: Path) 
     assert "PlayingState" in states
     assert errors == ["test error"]
     service.shutdown()
+
+
+def test_score_only_preview_clock_and_loop_are_deterministic(
+    qtbot: QtBot,
+    tmp_path: Path,
+) -> None:
+    preview = tmp_path / "preview.mid"
+    preview.write_bytes(b"MThd")
+    service = SourcePlaybackService()
+    positions: list[int] = []
+    service.position_changed.connect(positions.append)
+    service.set_preview(preview, 200)
+    service.set_loop_range(20, 60)
+
+    service.play()
+    qtbot.waitUntil(lambda: len(positions) >= 4, timeout=1_000)
+    service.pause()
+    assert service.duration_ms == 200
+    assert 0 <= service.position_ms < 80
+    service.seek(40)
+    assert service.position_ms == 40
+    service.set_loop_range(None, None)
+    service.stop()
+    assert service.position_ms == 0
+    service.shutdown()

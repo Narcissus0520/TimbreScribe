@@ -29,6 +29,7 @@ class MediaWorkflowController(QObject):
     status = Signal(str, int)
     progress = Signal(int)
     error = Signal(str, str, str, str)
+    playback_position_changed = Signal(int)
 
     def __init__(
         self,
@@ -79,6 +80,21 @@ class MediaWorkflowController(QObject):
     @property
     def playback_position_ms(self) -> int:
         return self._playback.position_ms
+
+    def set_score_preview(self, source: Path, duration_ms: int) -> None:
+        self._playback.set_preview(source, duration_ms)
+
+    def play_synchronized(self) -> None:
+        self._playback.play()
+
+    def pause_synchronized(self) -> None:
+        self._playback.pause()
+
+    def stop_synchronized(self) -> None:
+        self._playback.stop()
+
+    def set_loop_range(self, start_ms: int | None, end_ms: int | None) -> None:
+        self._playback.set_loop_range(start_ms, end_ms)
 
     def import_media(self, source: Path) -> None:
         source = source.expanduser().resolve()
@@ -305,6 +321,7 @@ class MediaWorkflowController(QObject):
 
     def _playback_position_changed(self, position_ms: int) -> None:
         self._workspace.update_position(position_ms, self._playback.duration_ms)
+        self.playback_position_changed.emit(position_ms)
 
     def _playback_duration_changed(self, duration_ms: int) -> None:
         self._workspace.update_position(self._playback.position_ms, duration_ms)

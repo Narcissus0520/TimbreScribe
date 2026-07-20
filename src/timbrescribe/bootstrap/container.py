@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from timbrescribe.application import JobManager, NotationService, PhaseZeroService
+from timbrescribe.application import JobManager, NotationService, PhaseZeroService, ProjectService
 from timbrescribe.domain.score import ScoreBuilder
 from timbrescribe.infrastructure.basic_pitch import detect_basic_pitch
 from timbrescribe.infrastructure.exporting import (
@@ -21,6 +21,7 @@ from timbrescribe.infrastructure.ffmpeg.qt_probe_client import QtMediaProbeClien
 from timbrescribe.infrastructure.logging_config import configure_logging
 from timbrescribe.infrastructure.musescore import MuseScoreLocator
 from timbrescribe.infrastructure.paths import AppPaths
+from timbrescribe.infrastructure.persistence import ProjectArchiveStore, RecoveryStore
 from timbrescribe.infrastructure.playback import SourcePlaybackService
 from timbrescribe.infrastructure.recent_media import RecentMediaStore
 from timbrescribe.infrastructure.rendering import ScoreImageExporter, VerovioRenderer
@@ -29,6 +30,7 @@ from timbrescribe.infrastructure.workers.qt_basic_pitch_client import QtBasicPit
 from timbrescribe.infrastructure.workers.qt_mock_client import QtMockWorkerClient
 from timbrescribe.ui import MainWindow
 from timbrescribe.ui.basic_pitch_controller import BasicPitchController
+from timbrescribe.ui.editing_controller import EditingController
 from timbrescribe.ui.media_controller import MediaWorkflowController
 from timbrescribe.ui.notation_controller import NotationController
 
@@ -40,7 +42,8 @@ def build_main_window(paths: AppPaths | None = None) -> MainWindow:
     app_paths.create()
     configure_logging(app_paths.logs)
     musicxml = MusicXmlExporter()
-    service = PhaseZeroService(ScoreBuilder(), musicxml, MidiExporter())
+    midi = MidiExporter()
+    service = PhaseZeroService(ScoreBuilder(), musicxml, midi)
     worker = QtMockWorkerClient(app_paths)
     jobs = JobManager()
     availability = detect_basic_pitch()
@@ -49,7 +52,7 @@ def build_main_window(paths: AppPaths | None = None) -> MainWindow:
     renderer = VerovioRenderer()
     notation_service = NotationService(
         musicxml,
-        MidiExporter(),
+        midi,
         MxlExporter(musicxml),
         ScoreImageExporter(renderer),
     )
@@ -83,4 +86,19 @@ def build_main_window(paths: AppPaths | None = None) -> MainWindow:
         jobs=jobs,
     )
     window.attach_basic_pitch_controller(basic_pitch_controller)
+    project_archive = ProjectArchiveStore(musicxml, midi)
+    project_service = ProjectService(
+        project_archive,
+        RecoveryStore(app_paths.recovery, project_archive),
+    )
+    editing_controller = EditingController(
+        window.editing_workspace,
+        notation_service,
+        project_service,
+        midi,
+        app_paths.score_preview_midi,
+        source_media=lambda: media_controller.current_media,
+        transport=media_controller,
+    )
+    window.attach_editing_controller(editing_controller)
     return window

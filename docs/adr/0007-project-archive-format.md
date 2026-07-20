@@ -1,6 +1,6 @@
 # ADR 0007: Versioned project archive format
 
-- Status: Accepted (implementation deferred to Phase 4)
+- Status: Accepted and implemented in Phase 4
 - Date: 2026-07-21
 
 ## Context
@@ -19,4 +19,4 @@ Use a ZIP-based `.timbrescribe` container with independently versioned manifest 
 
 ## Consequences
 
-Phase 0 keeps an in-memory project only. Phase 4 must implement migrations and archive security tests before advertising persistence.
+Phase 4 implements the container with deterministic member ordering, a hash manifest, bounded in-memory loading, a migration registry, atomic replacement, and separate recovery copies. Media remains referenced by path and hash; it is never embedded implicitly.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from fractions import Fraction
+from io import BytesIO
 from pathlib import Path
 
 from mido import Message, MetaMessage, MidiFile, MidiTrack, bpm2tempo
@@ -44,13 +45,10 @@ class MidiExporter:
     """Export score notes to a format-1 Standard MIDI File."""
 
     def export(self, score: ScoreDocument, destination: Path) -> Path:
-        midi = MidiFile(type=1, ticks_per_beat=TICKS_PER_BEAT)
-        self._append_conductor_track(midi, score)
-        for part in score.parts:
-            self._append_part_track(midi, part)
+        rendered = self.render_bytes(score)
         try:
             with atomic_destination(destination) as temporary:
-                midi.save(filename=temporary)
+                temporary.write_bytes(rendered)
         except OSError as exc:
             raise TimbreScribeError(
                 ErrorCode.EXPORT_FAILED,
@@ -58,6 +56,17 @@ class MidiExporter:
                 "Choose a writable folder and try again.",
             ) from exc
         return destination.expanduser().resolve()
+
+    def render_bytes(self, score: ScoreDocument) -> bytes:
+        """Return deterministic MIDI bytes for archives and playback snapshots."""
+
+        midi = MidiFile(type=1, ticks_per_beat=TICKS_PER_BEAT)
+        self._append_conductor_track(midi, score)
+        for part in score.parts:
+            self._append_part_track(midi, part)
+        output = BytesIO()
+        midi.save(file=output)
+        return output.getvalue()
 
     @staticmethod
     def _append_conductor_track(midi: MidiFile, score: ScoreDocument) -> None:
@@ -97,7 +106,7 @@ class MidiExporter:
                             "note_on",
                             channel=part.midi_channel,
                             note=note.sounding_pitch,
-                            velocity=80,
+                            velocity=note.velocity,
                             time=0,
                         ),
                     ),

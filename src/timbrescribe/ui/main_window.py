@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from PySide6.QtCore import QCoreApplication, Qt
-from PySide6.QtGui import QAction, QCloseEvent
+from PySide6.QtGui import QAction, QCloseEvent, QKeySequence
 from PySide6.QtWidgets import (
     QComboBox,
     QDockWidget,
@@ -30,6 +30,7 @@ from timbrescribe.infrastructure.basic_pitch import BasicPitchAvailability
 from timbrescribe.infrastructure.musescore import MuseScoreAvailability, open_in_musescore
 from timbrescribe.infrastructure.workers.qt_mock_client import QtMockWorkerClient
 from timbrescribe.ui.basic_pitch_workspace import BasicPitchWorkspace
+from timbrescribe.ui.editing_workspace import EditingWorkspace
 from timbrescribe.ui.media_workspace import MediaWorkspace
 from timbrescribe.ui.notation_workspace import NotationWorkspace
 from timbrescribe.ui.piano_roll import PianoRollWidget
@@ -38,7 +39,9 @@ from timbrescribe.ui.verovio_view import VerovioScoreView
 from timbrescribe.ui.waveform import WaveformWidget
 
 if TYPE_CHECKING:
+    from timbrescribe.application import ProjectVersionToken
     from timbrescribe.ui.basic_pitch_controller import BasicPitchController
+    from timbrescribe.ui.editing_controller import EditingController
     from timbrescribe.ui.media_controller import MediaWorkflowController
     from timbrescribe.ui.notation_controller import NotationController
 
@@ -68,15 +71,33 @@ class MainWindow(QMainWindow):
         self._media_controller: MediaWorkflowController | None = None
         self._basic_pitch_controller: BasicPitchController | None = None
         self._notation_controller: NotationController | None = None
+        self._editing_controller: EditingController | None = None
+        self._mock_start_token: ProjectVersionToken | None = None
+        self._mock_started_without_project = True
         self._musescore_availability = musescore_availability
 
-        self.setWindowTitle(_tr("TimbreScribe · 谱迹 — Basic Pitch + Mock/Test"))
+        self._base_window_title = _tr("TimbreScribe · 谱迹 — Basic Pitch + Mock/Test")
+        self.setWindowTitle(self._base_window_title)
         self.resize(1180, 760)
         self.setMinimumSize(860, 600)
 
         self.import_media_action = QAction(_tr("导入媒体"), self)
-        self.import_media_action.setShortcut("Ctrl+O")
+        self.import_media_action.setShortcut("Ctrl+I")
         self.import_media_action.setEnabled(False)
+        self.open_project_action = QAction(_tr("打开项目"), self)
+        self.open_project_action.setShortcut("Ctrl+O")
+        self.save_project_action = QAction(_tr("保存项目"), self)
+        self.save_project_action.setShortcut("Ctrl+S")
+        self.save_project_action.setEnabled(False)
+        self.save_project_as_action = QAction(_tr("项目另存为"), self)
+        self.save_project_as_action.setShortcut("Ctrl+Shift+S")
+        self.save_project_as_action.setEnabled(False)
+        self.undo_action = QAction(_tr("撤销"), self)
+        self.undo_action.setShortcut("Ctrl+Z")
+        self.undo_action.setEnabled(False)
+        self.redo_action = QAction(_tr("重做"), self)
+        self.redo_action.setShortcuts([QKeySequence("Ctrl+Y"), QKeySequence("Ctrl+Shift+Z")])
+        self.redo_action.setEnabled(False)
         self.run_action = QAction(_tr("运行 Mock 转录"), self)
         self.run_action.setShortcut("Ctrl+R")
         self.cancel_action = QAction(_tr("取消"), self)
@@ -107,6 +128,7 @@ class MainWindow(QMainWindow):
         self.musicxml_preview.setPlaceholderText(_tr("生成后的 MusicXML 4.0 将显示在这里。"))
         self.waveform_view = WaveformWidget(self)
         self.piano_roll_view = PianoRollWidget(self)
+        self.editing_workspace = EditingWorkspace(self)
         self.tabs = QTabWidget(self)
         self.verovio_tab_index = self.tabs.addTab(self.verovio_view, _tr("Verovio 乐谱"))
         self.tabs.addTab(self.score_preview, _tr("乐谱"))
@@ -118,6 +140,10 @@ class MainWindow(QMainWindow):
         self.piano_roll_tab_index = self.tabs.addTab(
             self.piano_roll_view,
             _tr("原始钢琴卷帘"),
+        )
+        self.editing_tab_index = self.tabs.addTab(
+            self.editing_workspace,
+            _tr("可编辑乐谱"),
         )
         self.setCentralWidget(self.tabs)
 
@@ -205,14 +231,40 @@ class MainWindow(QMainWindow):
         controller.diagnostic.connect(self._append_diagnostic)
         controller.status.connect(self.statusBar().showMessage)
         controller.error.connect(self._show_error)
-        controller.presentation_ready.connect(self._adopt_presentation)
+        controller.presentation_ready.connect(self._adopt_notation_presentation)
         if self._basic_pitch_controller is not None:
             self._basic_pitch_controller.raw_changed.connect(controller.set_raw_transcription)
+
+    @property
+    def editing_controller(self) -> EditingController | None:
+        return self._editing_controller
+
+    def attach_editing_controller(self, controller: EditingController) -> None:
+        """Attach Phase 4 editing and persistence after media transport is wired."""
+
+        if self._editing_controller is not None:
+            raise RuntimeError("An editing controller is already attached")
+        self._editing_controller = controller
+        controller.setParent(self)
+        controller.presentation_ready.connect(self._adopt_presentation)
+        controller.dirty_changed.connect(self._editing_dirty_changed)
+        controller.history_changed.connect(self._editing_history_changed)
+        controller.project_path_changed.connect(self._project_path_changed)
+        controller.status.connect(self.statusBar().showMessage)
+        controller.error.connect(self._show_error)
+        controller.recovery_available.connect(self._show_recovery_offer)
+        self.save_project_action.setEnabled(controller.session is not None)
+        self.save_project_as_action.setEnabled(controller.session is not None)
 
     def _build_toolbar(self) -> None:
         toolbar = QToolBar(_tr("工作台工具"), self)
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        toolbar.addAction(self.open_project_action)
+        toolbar.addAction(self.save_project_action)
+        toolbar.addAction(self.undo_action)
+        toolbar.addAction(self.redo_action)
+        toolbar.addSeparator()
         toolbar.addAction(self.import_media_action)
         toolbar.addSeparator()
         toolbar.addAction(self.run_action)
@@ -269,6 +321,15 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, diagnostics_dock)
 
     def _connect_signals(self) -> None:
+        self.open_project_action.triggered.connect(self._choose_project_source)
+        self.save_project_action.triggered.connect(self._save_project)
+        self.save_project_as_action.triggered.connect(self._choose_project_destination)
+        self.undo_action.triggered.connect(
+            lambda: self._editing_controller.undo() if self._editing_controller else None
+        )
+        self.redo_action.triggered.connect(
+            lambda: self._editing_controller.redo() if self._editing_controller else None
+        )
         self.import_media_action.triggered.connect(self._choose_media_source)
         self.run_action.triggered.connect(self.run_mock_transcription)
         self.cancel_action.triggered.connect(self.cancel_active_job)
@@ -279,6 +340,15 @@ class MainWindow(QMainWindow):
         self.export_png_action.triggered.connect(lambda: self._choose_visual_destination("png"))
         self.export_pdf_action.triggered.connect(lambda: self._choose_visual_destination("pdf"))
         self.open_musescore_action.triggered.connect(self._choose_musescore_destination)
+        file_menu = self.menuBar().addMenu(_tr("文件"))
+        file_menu.addAction(self.open_project_action)
+        file_menu.addAction(self.save_project_action)
+        file_menu.addAction(self.save_project_as_action)
+        file_menu.addSeparator()
+        file_menu.addAction(self.import_media_action)
+        edit_menu = self.menuBar().addMenu(_tr("编辑"))
+        edit_menu.addAction(self.undo_action)
+        edit_menu.addAction(self.redo_action)
         export_menu = self.menuBar().addMenu(_tr("导出"))
         for action in (
             self.export_musicxml_action,
@@ -301,7 +371,13 @@ class MainWindow(QMainWindow):
     def run_mock_transcription(self) -> None:
         if self._worker.is_busy:
             return
+        if self._editing_controller is not None and not self._confirm_replace_project():
+            return
         job_id = uuid4().hex
+        self._mock_start_token = (
+            self._editing_controller.version_token() if self._editing_controller else None
+        )
+        self._mock_started_without_project = self._mock_start_token is None
         self._active_job_id = job_id
         self._jobs.start(job_id)
         self.progress_bar.setValue(0)
@@ -354,6 +430,17 @@ class MainWindow(QMainWindow):
         controller = self._require_notation_controller()
         return controller.service.export_pdf(self._require_presentation(), destination)
 
+    def _adopt_notation_presentation(self, value: object) -> None:
+        if not isinstance(value, ScorePresentation):
+            return
+        controller = self._editing_controller
+        if controller is not None:
+            if controller.dirty and not self._confirm_replace_project():
+                return
+            controller.adopt_presentation(value)
+            return
+        self._adopt_presentation(value)
+
     def _adopt_presentation(self, value: object) -> None:
         if not isinstance(value, ScorePresentation):
             return
@@ -378,7 +465,13 @@ class MainWindow(QMainWindow):
         self.export_musicxml_action.setEnabled(True)
         self.export_midi_action.setEnabled(True)
         self._set_advanced_exports_enabled(True)
-        self.tabs.setCurrentIndex(self.verovio_tab_index)
+        self.save_project_action.setEnabled(self._editing_controller is not None)
+        self.save_project_as_action.setEnabled(self._editing_controller is not None)
+        self.tabs.setCurrentIndex(
+            self.editing_tab_index
+            if self._editing_controller is not None
+            else self.verovio_tab_index
+        )
 
     def _on_progress(self, job_id: str, stage: str, fraction: float) -> None:
         if job_id != self._active_job_id:
@@ -419,27 +512,30 @@ class MainWindow(QMainWindow):
         self._jobs.succeed(raw_value.job_id)
         if self._notation_controller is not None:
             self._notation_controller.set_raw_transcription(raw_value)
-        self._presentation = presentation
-        self.score_preview.set_score(presentation.project.score)
-        self.verovio_view.set_musicxml(presentation.musicxml)
-        self.musicxml_preview.setPlainText(presentation.musicxml)
-        score = presentation.project.score
-        self.inspector_label.setText(
-            _tr(
-                "标题：{title}\n音符：{notes}\n小节：{measures}\n速度：{tempo} BPM\n来源：Mock/Test"
-            ).format(
-                title=score.title,
-                notes=len(score.all_notes),
-                measures=score.measure_count,
-                tempo=score.tempo_bpm,
+        controller = self._editing_controller
+        accepted = (
+            controller.adopt_presentation(
+                presentation,
+                expected_token=self._mock_start_token,
+                require_absent=self._mock_started_without_project,
             )
+            if controller is not None
+            else True
         )
-        self.export_musicxml_action.setEnabled(True)
-        self.export_midi_action.setEnabled(True)
-        self._set_advanced_exports_enabled(True)
+        if not accepted:
+            self.statusBar().showMessage(
+                _tr("后台结果已过期；稍后的编辑未被覆盖"),
+                8_000,
+            )
+            self._append_diagnostic(_tr("拒绝了启动作业后已过期的 Mock 乐谱结果"))
+            return
+        if controller is None:
+            self._adopt_presentation(presentation)
         self.statusBar().showMessage(_tr("Mock 乐谱已生成；原始事件已保留"), 8_000)
         self._append_diagnostic(
-            _tr("作业完成：{notes} 个 Mock/Test 音符").format(notes=len(score.all_notes))
+            _tr("作业完成：{notes} 个 Mock/Test 音符").format(
+                notes=len(presentation.project.score.all_notes)
+            )
         )
 
     def _on_failed(self, job_id: str, code: str, message: str, remediation: str) -> None:
@@ -470,6 +566,8 @@ class MainWindow(QMainWindow):
         self.simulation_combo.setEnabled(not busy)
         if not busy:
             self._active_job_id = None
+            self._mock_start_token = None
+            self._mock_started_without_project = True
 
     def _on_basic_pitch_busy_changed(self, busy: bool) -> None:
         self.run_basic_pitch_action.setEnabled(
@@ -491,6 +589,44 @@ class MainWindow(QMainWindow):
         )
         if filename:
             self._perform_export(Path(filename), kind="musicxml")
+
+    def _choose_project_source(self) -> None:
+        controller = self._editing_controller
+        if controller is None or not self._confirm_replace_project():
+            return
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            _tr("打开 TimbreScribe 项目"),
+            "",
+            _tr("TimbreScribe 项目 (*.timbrescribe)"),
+        )
+        if filename:
+            controller.open_async(Path(filename))
+
+    def _save_project(self) -> None:
+        controller = self._editing_controller
+        if controller is None or controller.session is None:
+            return
+        if controller.current_path is None:
+            self._choose_project_destination()
+        else:
+            controller.save_async()
+
+    def _choose_project_destination(self) -> None:
+        controller = self._editing_controller
+        if controller is None or controller.session is None:
+            return
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            _tr("保存 TimbreScribe 项目"),
+            "TimbreScribe.timbrescribe",
+            _tr("TimbreScribe 项目 (*.timbrescribe)"),
+        )
+        if filename:
+            destination = Path(filename)
+            if destination.suffix.lower() != ".timbrescribe":
+                destination = destination.with_suffix(".timbrescribe")
+            controller.save_async(destination)
 
     def _choose_media_source(self) -> None:
         filename, _ = QFileDialog.getOpenFileName(
@@ -616,6 +752,83 @@ class MainWindow(QMainWindow):
             action.setEnabled(enabled)
         self.open_musescore_action.setEnabled(enabled and self._musescore_availability.available)
 
+    def _editing_dirty_changed(self, dirty: bool) -> None:
+        controller = self._editing_controller
+        available = controller is not None and controller.session is not None
+        self.save_project_action.setEnabled(available)
+        self.save_project_as_action.setEnabled(available)
+        path = controller.current_path if controller is not None else None
+        label = path.name if path is not None else self._base_window_title
+        self.setWindowTitle(f"{'*' if dirty else ''}{label} — TimbreScribe")
+
+    def _editing_history_changed(self, can_undo: bool, can_redo: bool) -> None:
+        self.undo_action.setEnabled(can_undo)
+        self.redo_action.setEnabled(can_redo)
+
+    def _project_path_changed(self, path_value: object) -> None:
+        controller = self._editing_controller
+        dirty = controller.dirty if controller is not None else False
+        label = path_value.name if isinstance(path_value, Path) else self._base_window_title
+        self.setWindowTitle(f"{'*' if dirty else ''}{label} — TimbreScribe")
+
+    def _show_recovery_offer(self, candidates_value: object) -> None:
+        if not isinstance(candidates_value, tuple) or not candidates_value:
+            return
+        candidate = candidates_value[0]
+        response = QMessageBox.question(
+            self,
+            _tr("发现崩溃恢复副本"),
+            _tr("发现一个经过验证的自动保存副本。是否恢复最新副本？"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if response == QMessageBox.StandardButton.Yes and self._editing_controller is not None:
+            self._editing_controller.recover(candidate)
+
+    def _confirm_replace_project(self) -> bool:
+        controller = self._editing_controller
+        if controller is None or not controller.dirty:
+            return True
+        message = QMessageBox(self)
+        message.setIcon(QMessageBox.Icon.Warning)
+        message.setWindowTitle(_tr("项目有未保存更改"))
+        message.setText(_tr("保存更改后再继续吗？"))
+        message.setInformativeText(_tr("选择“不保存”会丢弃可撤销的编辑，但不会修改原始转录证据。"))
+        message.setStandardButtons(
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel
+        )
+        message.setDefaultButton(QMessageBox.StandardButton.Save)
+        result = QMessageBox.StandardButton(message.exec())
+        if result == QMessageBox.StandardButton.Cancel:
+            return False
+        if result == QMessageBox.StandardButton.Discard:
+            return True
+        destination = controller.current_path
+        if destination is None:
+            filename, _ = QFileDialog.getSaveFileName(
+                self,
+                _tr("先保存项目"),
+                "TimbreScribe.timbrescribe",
+                _tr("TimbreScribe 项目 (*.timbrescribe)"),
+            )
+            if not filename:
+                return False
+            destination = Path(filename)
+            if destination.suffix.lower() != ".timbrescribe":
+                destination = destination.with_suffix(".timbrescribe")
+        try:
+            controller.save_sync(destination)
+        except (OSError, TimbreScribeError, ValueError) as exc:
+            self._show_error(
+                _tr("保存项目失败"),
+                str(exc),
+                _tr("当前项目仍保持打开；请选择其他可写目录。"),
+            )
+            return False
+        return True
+
     def _require_presentation(self) -> ScorePresentation:
         if self._presentation is None:
             raise ValueError("No score is available for export")
@@ -646,6 +859,11 @@ class MainWindow(QMainWindow):
         self.diagnostics.appendPlainText(text)
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        if not self._confirm_replace_project():
+            event.ignore()
+            return
+        if self._editing_controller is not None:
+            self._editing_controller.shutdown()
         if self._basic_pitch_controller is not None:
             self._basic_pitch_controller.shutdown()
         if self._media_controller is not None:
