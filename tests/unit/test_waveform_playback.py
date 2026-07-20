@@ -75,3 +75,4 @@ def test_playback_service_bridges_transport_state(qtbot: QtBot, tmp_path: Path) 
     assert 500 in durations
     assert "PlayingState" in states
     assert errors == ["test error"]
+    service.shutdown()

@@ -173,7 +173,7 @@ class MediaWorkflowController(QObject):
         self._decoder.shutdown()
         self._probe.shutdown()
         self._waveform_client.shutdown()
-        self._playback.stop()
+        self._playback.shutdown()
 
     def _connect_signals(self) -> None:
         self._workspace.file_dropped.connect(self.import_media)

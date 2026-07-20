@@ -59,7 +59,7 @@ Phase 1 — Media Import, Playback, and Worker Job Foundation (`v0.2.0`).
 |---|---|
 | `py -3.11 --version` | Passed: Python 3.11.9 x64 |
 | `uv --version` | Passed: uv 0.11.29 |
-| local FFmpeg reference discovery | Passed: FFmpeg `n8.1.2-21-gce3c09c101-20260630`; archive and both executable SHA-256 values match the WinGet manifest |
+| `tools/setup_ffmpeg.ps1` end-to-end | Passed in 49 seconds: download, archive/executable SHA-256, version, configure flags, and sibling pair verified |
 | `uv sync --frozen --group dev` | Passed: 51 locked packages checked |
 | `uv run ruff format --check .` | Passed |
 | `uv run ruff check .` | Passed |

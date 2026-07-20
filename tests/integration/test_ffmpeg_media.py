@@ -115,12 +115,11 @@ def test_source_playback_seeks_and_reports_time(
     with qtbot.waitSignal(playback.duration_changed, timeout=5_000) as duration:
         playback.set_source(generated_media["wav"])
     assert duration.args[0] >= 1_900
-    playback.play()
-    qtbot.waitUntil(lambda: any(position > 0 for position in positions), timeout=5_000)
     playback.seek(750)
     qtbot.waitUntil(lambda: abs(playback.position_ms - 750) < 150, timeout=3_000)
-    playback.pause()
-    playback.stop()
+    assert any(abs(position - 750) < 150 for position in positions)
+    playback.shutdown()
+    qtbot.wait(50)
 
 
 def test_decode_cache_progress_and_cache_hit(

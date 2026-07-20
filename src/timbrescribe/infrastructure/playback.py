@@ -47,6 +47,12 @@ class SourcePlaybackService(QObject):
     def stop(self) -> None:
         self._player.stop()
 
+    def shutdown(self) -> None:
+        """Release backend resources before Qt begins object destruction."""
+
+        self._player.stop()
+        self._player.setSource(QUrl())
+
     def seek(self, position_ms: int) -> None:
         self._player.setPosition(max(0, min(position_ms, self.duration_ms)))
 

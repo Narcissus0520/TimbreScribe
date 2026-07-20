@@ -47,7 +47,8 @@ $ffmpegVersionOutput = & $ffmpegSetupExe -version 2>&1
 if ($LASTEXITCODE -ne 0 -or $ffmpegVersionOutput[0] -notmatch "n8\.1\.2-21-gce3c09c101-20260630") {
     throw "Extracted FFmpeg version mismatch"
 }
-if ($ffmpegVersionOutput -match "--enable-nonfree" -or $ffmpegVersionOutput -notmatch "--disable-static") {
+$ffmpegVersionText = $ffmpegVersionOutput -join "`n"
+if ($ffmpegVersionText -match "--enable-nonfree" -or $ffmpegVersionText -notmatch "--disable-static") {
     throw "Extracted FFmpeg configure flags do not match the approved shared LGPL reference"
 }
 
