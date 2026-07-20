@@ -1,0 +1,21 @@
+* text=auto
+
+*.py text eol=lf
+*.toml text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.ps1 text eol=crlf
+*.musicxml text eol=lf
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.python-version text eol=lf
+LICENSE text eol=lf
+NOTICE text eol=lf
+uv.lock text eol=lf
+
+*.mid binary
+*.png binary
+*.ico binary
