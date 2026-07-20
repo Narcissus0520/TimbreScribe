@@ -43,7 +43,7 @@ Phase 1 — Media Import, Playback, and Worker Job Foundation (`v0.2.0`).
 
 ## In progress
 
-- Completing native visual/playback smoke checks and Phase 1 PR/Windows CI review.
+- Completing final Phase 1 PR review and merge after the documented CI rerun.
 
 ## Known issues / blockers
 
@@ -70,6 +70,7 @@ Phase 1 — Media Import, Playback, and Worker Job Foundation (`v0.2.0`).
 | native Windows hidden-window visual capture | Passed: Chinese/English text, treble clef, four Mock notes, inspector, diagnostics, and progress rendered correctly |
 | Phase 1 native media visual/playback capture | Passed: verified MP4 metadata, 789 ms playback, 992-point waveform, enabled controls, diagnostics, and 100% job progress rendered correctly |
 | GitHub Actions `Windows quality gates` | Passed in 55 seconds on PR #1 ([run 29763442272](https://github.com/Narcissus0520/TimbreScribe/actions/runs/29763442272)) |
+| Phase 1 GitHub Actions `Windows quality gates` | Passed on PR #2: verified FFmpeg install, format, lint, strict typing, and model-free tests ([run 29766473383](https://github.com/Narcissus0520/TimbreScribe/actions/runs/29766473383)) |
 
 ## Next recommended task
 
