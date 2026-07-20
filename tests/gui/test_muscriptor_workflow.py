@@ -4,6 +4,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtWidgets import QLineEdit
 from pytest import MonkeyPatch
 from pytestqt.qtbot import QtBot
 from tests.factories import make_muscriptor_raw_transcription
@@ -248,6 +249,20 @@ def test_license_token_install_and_delete_gates(
     controller, workspace, models, acceptances, credentials, _worker, installer = values
     errors: list[str] = []
     controller.error.connect(lambda title, *_rest: errors.append(title))
+
+    small = load_muscriptor_catalog().model("small")
+    assert "EXPERIMENTAL / NON-COMMERCIAL" in workspace.experimental_notice.text()
+    assert small.model_id in workspace.terms_link.text()
+    assert small.license_id in workspace.terms_link.text()
+    assert small.revision[:12] in workspace.terms_link.text()
+    assert f"{small.size_bytes / (1024 * 1024):.1f} MiB" in workspace.status_label.text()
+    assert str(models.status(small).path) in workspace.status_label.text()
+    assert workspace.token.echoMode() == QLineEdit.EchoMode.Password
+    assert not workspace.install_button.isEnabled()
+    assert not workspace.run_button.isEnabled()
+    variant_model = workspace.variant.model()
+    medium_index = variant_model.index(1, 0)
+    assert not (variant_model.flags(medium_index) & Qt.ItemFlag.ItemIsEnabled)
 
     controller.install()
     controller.start()

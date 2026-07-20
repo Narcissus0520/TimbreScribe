@@ -32,6 +32,18 @@ Phase 5 — Multi-Part Score and MuScriptor Experimental Adapter (`v0.6.0`), imp
 - Kept default installation, startup, CI, Mock, Basic Pitch, editing, project persistence, notation, and every export fully functional with neither MuScriptor nor Torch installed.
 - Added model-free domain/contract/worker/management/process/GUI tests, an opt-in real Small-model acceptance test requiring approved local material, `tools/setup_muscriptor.ps1`, ADR 0015, architecture/testing/license documentation, and third-party notices.
 
+## Phase 5 acceptance matrix
+
+| `AGENTS.md` acceptance requirement | Current evidence | Status |
+|---|---|---|
+| Application remains fully functional without MuScriptor installed | Default dependency sync plus the complete model-free suite runs with both `muscriptor` and `torch` absent | Passed |
+| No gated model is downloaded without explicit acceptance | Unit and isolated-process installer tests fail with the license error before the download adapter is reached | Passed |
+| No token appears in logs/project files | Credential, protocol, artifact, diagnostic-redaction, archive round-trip, repository, and wheel-content checks | Passed |
+| Small produces multiple parts on approved material | Opt-in isolated-worker acceptance test exists, but no terms acceptance, verified weights, or approved audio currently exist | **Blocked on operator action** |
+| Unsupported/unknown labels map safely and remain editable | Domain and GUI tests cover generic mapping, part remap, undo, and immutable raw labels | Passed |
+| Crash/out-of-memory preserves the project | Worker/controller crash, cancellation, and OOM simulations retain the prior raw/project snapshot | Passed |
+| MuScriptor is visibly experimental/non-commercial | GUI assertions pin the banner, exact model/revision/license link, model size/location, password token field, and Small-before-Medium gating | Passed |
+
 ## In progress
 
 - Obtain explicit operator acceptance of the exact current MuScriptor Small model terms and provider conditions through the application.
