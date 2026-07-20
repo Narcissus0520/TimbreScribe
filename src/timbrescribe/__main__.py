@@ -16,10 +16,18 @@ QToolButton { padding: 6px 10px; border-radius: 4px; }
 QToolButton:hover { background: #39414d; }
 QToolButton:disabled { color: #707986; }
 QDockWidget::title { background: #282d36; padding: 6px; }
-QComboBox, QPlainTextEdit { background: #171a20; border: 1px solid #3a424f; padding: 4px; }
+QComboBox, QDoubleSpinBox, QPlainTextEdit {
+  background: #171a20; border: 1px solid #3a424f; padding: 4px;
+}
+QPushButton { background: #313844; border: 1px solid #485363; border-radius: 3px; padding: 6px; }
+QPushButton:hover { background: #3a4554; }
+QPushButton:pressed { background: #253141; }
+QPushButton:disabled { background: #242932; color: #747d89; border-color: #353c47; }
 QTabWidget::pane { border: 1px solid #353d48; }
 QTabBar::tab { background: #282d36; padding: 7px 14px; }
 QTabBar::tab:selected { background: #3a4554; }
+QSlider::groove:horizontal { background: #46505e; height: 4px; }
+QSlider::handle:horizontal { background: #4d9ef2; width: 12px; margin: -5px 0; border-radius: 6px; }
 QProgressBar { border: 1px solid #46505e; border-radius: 3px; text-align: center; }
 QProgressBar::chunk { background: #3f91e8; }
 """

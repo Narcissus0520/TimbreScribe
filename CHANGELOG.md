@@ -6,6 +6,13 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Added
 
+- Verified FFmpeg/ffprobe discovery with pinned version, configuration, archive, and binary hashes.
+- Asynchronous WAV, MP3, and MP4 import with Unicode/spaced paths and stream metadata.
+- Explicit audio-stream and analysis-range selection with immutable source-media evidence.
+- Cancelable QProcess decoding to canonical mono 44.1 kHz PCM and content-addressed cache metadata.
+- Source playback transport, current-time reporting, seeking, and asynchronous waveform rendering.
+- Recent-media persistence, safe derived-cache cleanup, drag-and-drop, and file-picker workflows.
+- Generated audio/video integration fixtures and exact-FFmpeg Windows CI setup.
 - Repository operating contract and Phase 0 development foundation.
 - Python 3.11 and uv project metadata with Windows CI quality gates.
 - Layered domain, application, infrastructure, worker, bootstrap, and PySide6 UI packages.
@@ -21,7 +28,13 @@ All notable changes to TimbreScribe will be documented in this file. The project
 ### Fixed
 
 - Forced UTF-8 on Mock worker standard streams so JSONL paths remain valid on Windows systems using non-UTF-8 console code pages.
+- Bridged Qt Multimedia 64-bit time signals explicitly for reliable PySide6 signal delivery.
+- Prevented successful FFmpeg exits without an artifact and process-start errors from promoting invalid cache entries.
 
-## [0.1.0] - Unreleased
+## [0.2.0] - Unreleased
 
-Phase 0 will provide the deterministic Mock transcription vertical slice. It is not yet a stable end-user release.
+Phase 1 provides the media import, playback, decode/cache, waveform, recent-media, and worker-job foundation. It does not yet run a real transcription model.
+
+## [0.1.0] - 2026-07-21
+
+Phase 0 delivered the deterministic Mock transcription vertical slice through merged PR #1.

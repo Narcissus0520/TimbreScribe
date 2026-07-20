@@ -9,6 +9,7 @@ from math import lcm
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from timbrescribe import __version__
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
 from timbrescribe.domain.score import ScoreDocument, ScoreNote
 from timbrescribe.infrastructure.exporting.atomic import atomic_destination
@@ -35,7 +36,7 @@ class MusicXmlExporter:
         identification = ET.SubElement(root, "identification")
         ET.SubElement(identification, "creator", {"type": "composer"}).text = score.composer
         encoding = ET.SubElement(identification, "encoding")
-        ET.SubElement(encoding, "software").text = "TimbreScribe 0.1.0"
+        ET.SubElement(encoding, "software").text = f"TimbreScribe {__version__}"
 
         part_list = ET.SubElement(root, "part-list")
         for index, part in enumerate(score.parts, start=1):

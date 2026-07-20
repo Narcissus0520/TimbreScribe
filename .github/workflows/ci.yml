@@ -35,6 +35,10 @@ jobs:
       - name: Synchronize locked environment
         run: uv sync --frozen --group dev
 
+      - name: Install verified FFmpeg reference
+        shell: pwsh
+        run: ./tools/setup_ffmpeg.ps1 -Destination (Join-Path $env:RUNNER_TEMP "timbrescribe-ffmpeg")
+
       - name: Check formatting
         run: uv run ruff format --check .
 
