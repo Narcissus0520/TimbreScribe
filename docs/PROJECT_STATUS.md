@@ -66,6 +66,7 @@ Phase 5 — Multi-Part Score and MuScriptor Experimental Adapter (`v0.6.0`), imp
 | Command | Result |
 |---|---|
 | `uv sync --frozen --group dev` | Passed; default environment contains neither `muscriptor` nor `torch` |
+| `tools/setup_muscriptor.ps1` code-runtime check | Passed with MuScriptor 0.2.1 and CPU Torch 2.13.0; no acceptance record or managed weight file was created; default environment was restored afterward |
 | `uv lock --check` | Passed: 142 packages resolved from the current lock |
 | `ruff format --check .` | Passed: 153 files formatted |
 | `ruff check .` | Passed |
