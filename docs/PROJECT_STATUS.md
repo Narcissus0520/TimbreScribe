@@ -31,7 +31,7 @@ Phase 3 — Reviewed Notation and Professional Export (`v0.4.0`).
 
 ## In progress
 
-- Phase 3 PR preparation, Windows CI, review, and merge.
+- Phase 3 PR #4 review and merge after a successful Windows CI run.
 
 ## Known issues / blockers
 
@@ -56,6 +56,7 @@ Phase 3 — Reviewed Notation and Professional Export (`v0.4.0`).
 | native Windows GUI smoke | Passed: real locked QWebEngine displayed one local Verovio 6.2.1 page; notation controls and inspector remained responsive |
 | MXL safety/determinism | Passed: byte-identical exports, round trip, traversal and member-count rejection |
 | W3C MusicXML 4.0 XSD | Passed: hash-pinned official schemas validated generated piano, B-flat, E-flat, and F fixtures; CI gate added |
+| GitHub Actions Windows CI | Passed: run 29775036983 completed Ruff formatting/lint, strict Mypy, official XSD, and 130-test gates |
 | MuseScore availability | Correctly reported unavailable on this machine; action disabled; external round-trip pending |
 
 ## Next recommended task
