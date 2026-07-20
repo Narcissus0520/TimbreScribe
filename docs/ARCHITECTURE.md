@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 0 proves the smallest honest end-to-end path: a separate deterministic Mock worker emits raw note evidence, the application derives a score, the UI displays it, and exporters create MusicXML and MIDI without network access or a model download.
+Phase 0 proves the smallest honest score path. Phase 1 adds a source-media path that imports and probes local media, selects a stream/range, decodes a deterministic lossless derivative, plays the untouched source, and renders a bounded waveform without introducing a real model.
 
 ## Dependency direction
 
@@ -16,6 +16,10 @@ infrastructure adapters
 
 separate Mock worker
     -> shared versioned protocol and artifact schemas
+
+media workflow controller
+    -> asynchronous FFmpeg probe/decode and waveform adapters
+    -> Qt Multimedia source playback service
 ```
 
 The domain imports neither PySide6 nor filesystem, subprocess, exporter, or model SDK code. Application services depend on protocols for exports. Composition code is the only place that wires concrete adapters to UI and services.
@@ -35,6 +39,26 @@ MainWindow
 
 Worker stdout is protocol-only. Diagnostics are read separately from stderr. Cancellation first sends a cooperative protocol command, then escalates to terminate/kill after bounded timeouts.
 
+## Phase 1 media flow
+
+```text
+picker / drag-and-drop / recent media
+  -> Qt probe thread discovers and verifies ffmpeg/ffprobe
+  -> ffprobe metadata + source SHA-256 become immutable SourceMedia
+  -> user selects audio stream and half-open time range
+  -> QProcess decodes to a partial mono 44.1 kHz PCM WAV
+  -> complete audio + schema-v1 metadata are atomically promoted in cache
+  -> waveform thread samples bounded peaks and the UI renders them
+
+SourceMedia.original_path
+  -> Qt Multimedia playback service
+  -> position/duration synchronization signals
+```
+
+FFmpeg discovery checks the bundled component location, an approved configured directory, then `PATH`. Version, configuration, and both executable hashes are captured. The exact Phase 1 reference is pinned in a package resource and the packaging evidence directory. All process calls use argument arrays without a shell.
+
+The decoded-cache key covers source content hash, stream, selected range, output sample rate/channels, and pipeline version. Cache cleanup cannot traverse outside the centrally configured derived-data root and never touches source media or project files.
+
 ## Data ownership
 
 - `RawNoteEvent` is immutable source evidence and retains engine/model provenance.
@@ -53,8 +77,11 @@ Phase 0 uses a small Qt painter-based score preview adapter. It displays real sc
 - Protocol and artifact schemas are versioned and validated at I/O boundaries.
 - Export uses a temporary sibling file and atomic replacement.
 - The worker cannot mutate the open project; a result is promoted only after validation.
+- ffprobe and FFmpeg have bounded execution; source hashing/probing and waveform sampling stay off the GUI thread.
+- Decode cancellation sends `q`, then terminate, then kill after bounded timeouts; partial audio/metadata are never reported as success.
+- Source files are opened read-only by probe/decode/playback adapters and verified unchanged by generated-media tests.
 - Mock/Test identity is visible in UI and artifacts.
 
 ## Deferred architecture
 
-Media decoding, real model workers, persistent project archives, Verovio assets, full editing/undo, playback, and packaging are intentionally deferred to their ordered milestones.
+Real model workers, persistent project archives, Verovio assets, score-preview synthesis, full editing/undo, loop/speed playback polish, and packaging are intentionally deferred to their ordered milestones.

@@ -1,8 +1,9 @@
-"""Phase 0 PySide6 application shell and Mock vertical-slice interaction."""
+"""PySide6 application shell for media and Mock transcription workflows."""
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from PySide6.QtCore import QCoreApplication, Qt
@@ -26,7 +27,12 @@ from timbrescribe.application import JobManager, PhaseZeroService, ScorePresenta
 from timbrescribe.domain.errors import TimbreScribeError
 from timbrescribe.domain.transcription import RawTranscription
 from timbrescribe.infrastructure.workers.qt_mock_client import QtMockWorkerClient
+from timbrescribe.ui.media_workspace import MediaWorkspace
 from timbrescribe.ui.score_preview import ScorePreviewWidget
+from timbrescribe.ui.waveform import WaveformWidget
+
+if TYPE_CHECKING:
+    from timbrescribe.ui.media_controller import MediaWorkflowController
 
 
 def _tr(text: str) -> str:
@@ -34,7 +40,7 @@ def _tr(text: str) -> str:
 
 
 class MainWindow(QMainWindow):
-    """A functional, honest Phase 0 workstation around the Mock/Test engine."""
+    """Functional workstation around source media and the Mock/Test engine."""
 
     def __init__(
         self,
@@ -49,11 +55,15 @@ class MainWindow(QMainWindow):
         self._jobs = jobs
         self._active_job_id: str | None = None
         self._presentation: ScorePresentation | None = None
+        self._media_controller: MediaWorkflowController | None = None
 
-        self.setWindowTitle(_tr("TimbreScribe · 谱迹 — Mock/Test"))
+        self.setWindowTitle(_tr("TimbreScribe · 谱迹 — 媒体 + Mock/Test"))
         self.resize(1180, 760)
         self.setMinimumSize(860, 600)
 
+        self.import_media_action = QAction(_tr("导入媒体"), self)
+        self.import_media_action.setShortcut("Ctrl+O")
+        self.import_media_action.setEnabled(False)
         self.run_action = QAction(_tr("运行 Mock 转录"), self)
         self.run_action.setShortcut("Ctrl+R")
         self.cancel_action = QAction(_tr("取消"), self)
@@ -68,10 +78,17 @@ class MainWindow(QMainWindow):
         self.musicxml_preview = QPlainTextEdit(self)
         self.musicxml_preview.setReadOnly(True)
         self.musicxml_preview.setPlaceholderText(_tr("生成后的 MusicXML 4.0 将显示在这里。"))
-        tabs = QTabWidget(self)
-        tabs.addTab(self.score_preview, _tr("乐谱"))
-        tabs.addTab(self.musicxml_preview, _tr("MusicXML"))
-        self.setCentralWidget(tabs)
+        self.waveform_view = WaveformWidget(self)
+        self.tabs = QTabWidget(self)
+        self.tabs.addTab(self.score_preview, _tr("乐谱"))
+        self.tabs.addTab(self.musicxml_preview, _tr("MusicXML"))
+        self.waveform_tab_index = self.tabs.addTab(
+            self.waveform_view,
+            _tr("波形/源媒体"),
+        )
+        self.setCentralWidget(self.tabs)
+
+        self.media_workspace = MediaWorkspace(self)
 
         self.scenario_combo = QComboBox(self)
         self.scenario_combo.addItem(_tr("单旋律"), "monophonic")
@@ -101,10 +118,29 @@ class MainWindow(QMainWindow):
     def presentation(self) -> ScorePresentation | None:
         return self._presentation
 
+    @property
+    def media_controller(self) -> MediaWorkflowController | None:
+        return self._media_controller
+
+    def attach_media_controller(self, controller: MediaWorkflowController) -> None:
+        """Attach the Phase 1 workflow after composition-root construction."""
+
+        if self._media_controller is not None:
+            raise RuntimeError("A media controller is already attached")
+        self._media_controller = controller
+        controller.setParent(self)
+        controller.diagnostic.connect(self._append_diagnostic)
+        controller.status.connect(self.statusBar().showMessage)
+        controller.progress.connect(self.progress_bar.setValue)
+        controller.error.connect(self._show_error)
+        self.import_media_action.setEnabled(True)
+
     def _build_toolbar(self) -> None:
-        toolbar = QToolBar(_tr("Phase 0 工具"), self)
+        toolbar = QToolBar(_tr("工作台工具"), self)
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        toolbar.addAction(self.import_media_action)
+        toolbar.addSeparator()
         toolbar.addAction(self.run_action)
         toolbar.addAction(self.cancel_action)
         toolbar.addSeparator()
@@ -113,6 +149,11 @@ class MainWindow(QMainWindow):
         self.addToolBar(toolbar)
 
     def _build_docks(self) -> None:
+        media_dock = QDockWidget(_tr("源媒体"), self)
+        media_dock.setObjectName("sourceMediaDock")
+        media_dock.setWidget(self.media_workspace)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, media_dock)
+
         source_widget = QWidget(self)
         source_layout = QFormLayout(source_widget)
         source_layout.addRow(_tr("引擎"), self.engine_label)
@@ -122,6 +163,8 @@ class MainWindow(QMainWindow):
         source_dock.setObjectName("mockTranscriptionDock")
         source_dock.setWidget(source_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, source_dock)
+        self.tabifyDockWidget(media_dock, source_dock)
+        media_dock.raise_()
 
         inspector_dock = QDockWidget(_tr("乐谱检查器"), self)
         inspector_dock.setObjectName("scoreInspectorDock")
@@ -134,6 +177,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, diagnostics_dock)
 
     def _connect_signals(self) -> None:
+        self.import_media_action.triggered.connect(self._choose_media_source)
         self.run_action.triggered.connect(self.run_mock_transcription)
         self.cancel_action.triggered.connect(self.cancel_active_job)
         self.export_musicxml_action.triggered.connect(self._choose_musicxml_destination)
@@ -283,6 +327,16 @@ class MainWindow(QMainWindow):
         if filename:
             self._perform_export(Path(filename), kind="musicxml")
 
+    def _choose_media_source(self) -> None:
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            _tr("导入媒体"),
+            "",
+            _tr("已验证媒体 (*.wav *.mp3 *.mp4)"),
+        )
+        if filename and self._media_controller is not None:
+            self._media_controller.import_media(Path(filename))
+
     def _choose_midi_destination(self) -> None:
         filename, _ = QFileDialog.getSaveFileName(
             self,
@@ -317,19 +371,27 @@ class MainWindow(QMainWindow):
             raise ValueError("No score is available for export")
         return self._presentation
 
-    def _show_error(self, title: str, detail: str, remediation: str) -> None:
+    def _show_error(
+        self,
+        title: str,
+        detail: str,
+        remediation: str,
+        technical_detail: str = "",
+    ) -> None:
         self._append_diagnostic(f"{title}: {detail}\n{remediation}")
         message_box = QMessageBox(self)
         message_box.setIcon(QMessageBox.Icon.Critical)
         message_box.setWindowTitle(title)
         message_box.setText(detail)
         message_box.setInformativeText(remediation)
-        message_box.setDetailedText(self._worker.diagnostic_tail)
+        message_box.setDetailedText(technical_detail or self._worker.diagnostic_tail)
         message_box.open()
 
     def _append_diagnostic(self, text: str) -> None:
         self.diagnostics.appendPlainText(text)
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        if self._media_controller is not None:
+            self._media_controller.shutdown()
         self._worker.shutdown()
         event.accept()

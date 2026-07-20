@@ -30,9 +30,22 @@ class AppPaths:
     def jobs(self) -> Path:
         return self.root / "jobs"
 
+    @property
+    def cache(self) -> Path:
+        return self.root / "cache"
+
+    @property
+    def decoded_media(self) -> Path:
+        return self.cache / "decoded-media"
+
+    @property
+    def settings_file(self) -> Path:
+        return self.root / "settings.json"
+
     def create(self) -> None:
         self.logs.mkdir(parents=True, exist_ok=True)
         self.jobs.mkdir(parents=True, exist_ok=True)
+        self.decoded_media.mkdir(parents=True, exist_ok=True)
 
     def create_job_directory(self, job_id: str) -> Path:
         if _SAFE_JOB_ID.fullmatch(job_id) is None:
