@@ -43,7 +43,7 @@ Phases 5–8 have passed their implemented acceptance gates and merged to `main`
 | Missing optional models do not block | GUI smoke starts with assistant off and no MuScriptor/assistant weights; default suite remains model-free | Passed |
 | File association and safe lifecycle | Temporary install, GUI smoke, in-place upgrade, setting/project preservation, association registration/removal, and silent uninstall | Passed on Windows 10 build 19045 |
 | Licenses/manifests/hashes | 54 resolved runtime distributions, 95 staged notice files, exact model/FFmpeg records, and artifact-wide file hash manifest | Passed |
-| Accessibility/high DPI | DPI policy, themes, focus/semantic-name tests and review documented | Implemented; manual Narrator and 100/150/200% display matrix pending v1 |
+| Accessibility/high DPI | DPI policy, themes, focus/semantic-name tests and review documented; readable installed workspace tabs manually confirmed | Layout passed; Narrator and full 100/150/200% display matrix remain pending v1 |
 | No P0/P1 | Automated source/artifact/installer gates have no known P0/P1 defect | Passed for current local scope; pristine RC matrix pending |
 
 ## Completed in Phase 7
@@ -103,8 +103,9 @@ Phases 5–8 have passed their implemented acceptance gates and merged to `main`
 | `ruff check .` | Passed |
 | `mypy src/timbrescribe` | Passed: 131 source files, strict mode |
 | `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 225 tests, 6 deselected, 77.22% branch-aware coverage |
-| Clean-`main` packaged artifact suite | Passed from `0087434`: 4 tests against frozen GUI/Workers, 6,582 artifact-wide hashes, notices, and one ONNX model |
-| Clean-`main` Inno installed lifecycle | Passed: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
+| Clean-`main` packaged artifact suite | Passed from `c808c9f`: 4 tests against frozen GUI/Workers, 6,582 artifact-wide hashes, notices, and one ONNX model |
+| Clean-`main` Inno installed lifecycle baseline | Passed from `0087434`: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
+| Post-fix installed layout | `c808c9f` installer rebuilt; operator confirmed the five readable workspace tabs display normally after upgrade | Passed |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
 | `benchmarks/score_pipeline.py --notes 1000 --runs 3` | Passed: 0.201 s median score-to-MusicXML, 0.299 s preview, 49.3 MiB peak working set |
 | `benchmarks/score_pipeline.py --notes 10000 --runs 3` | Passed: 2.100 s median score-to-MusicXML, 2.816 s preview, 114.2 MiB peak working set |

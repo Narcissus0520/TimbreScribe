@@ -48,6 +48,16 @@ uninstall, and association cleanup. The artifact scan found no Torch runtime dir
 MuScriptor/GGUF weight, token, or source media. Candidate hashes remain in the ignored local
 manifests because signing and public hash publication are not authorized.
 
+## Readable-workspace-tab reconstruction
+
+After the workspace-tab usability correction, the unsigned candidate was rebuilt from clean `main`
+at `c808c9f`. Its manifest again records 6,582 files, and all four packaged
+GUI/Mock/Basic Pitch/manifest tests passed. Inno Setup 7.0.2 produced the replacement installer,
+and the operator confirmed that the five workspace labels display normally after upgrading the
+existing installation. The destructive automated install/uninstall lifecycle was not repeated on
+that occupied workstation; the prior isolated lifecycle baseline remains the relevant automation
+evidence, while pristine Windows 10/11 testing remains the final v1 gate.
+
 ## Reproduction
 
 ```powershell
