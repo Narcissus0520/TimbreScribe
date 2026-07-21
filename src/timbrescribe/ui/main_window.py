@@ -406,7 +406,6 @@ class MainWindow(QMainWindow):
         source_dock.setWidget(source_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, source_dock)
         self.tabifyDockWidget(media_dock, source_dock)
-        media_dock.raise_()
 
         basic_pitch_dock = QDockWidget(_tr("Basic Pitch CPU"), self)
         basic_pitch_dock.setObjectName("basicPitchDock")
@@ -428,6 +427,7 @@ class MainWindow(QMainWindow):
 
         inspector_dock = QDockWidget(_tr("乐谱检查器"), self)
         inspector_dock.setObjectName("scoreInspectorDock")
+        inspector_dock.setMinimumWidth(180)
         inspector_dock.setWidget(self.inspector_label)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, inspector_dock)
 
@@ -435,6 +435,37 @@ class MainWindow(QMainWindow):
         diagnostics_dock.setObjectName("diagnosticsDock")
         diagnostics_dock.setWidget(self.diagnostics)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, diagnostics_dock)
+
+        # QMainWindow otherwise lets the central score views consume the complete
+        # initial geometry.  In that state every dock is reduced to a title-bar
+        # sliver, which makes the model/license controls impossible to reach.
+        # These are initial proportions only; users can still resize or undock
+        # every panel, and scrollable workspaces remain usable at smaller sizes.
+        self.resizeDocks(
+            [media_dock, inspector_dock],
+            [340, 220],
+            Qt.Orientation.Horizontal,
+        )
+        self.resizeDocks(
+            [diagnostics_dock],
+            [150],
+            Qt.Orientation.Vertical,
+        )
+        self._workspace_docks = {
+            "media": media_dock,
+            "mock": source_dock,
+            "basic_pitch": basic_pitch_dock,
+            "muscriptor": muscriptor_dock,
+            "notation": notation_dock,
+            "inspector": inspector_dock,
+            "diagnostics": diagnostics_dock,
+        }
+        media_dock.raise_()
+
+    @staticmethod
+    def _activate_dock(dock: QDockWidget) -> None:
+        dock.show()
+        dock.raise_()
 
     def _connect_signals(self) -> None:
         self.open_project_action.triggered.connect(self._choose_project_source)
@@ -484,6 +515,16 @@ class MainWindow(QMainWindow):
             export_menu.addAction(action)
         view_menu = self.menuBar().addMenu(_tr("View"))
         view_menu.addAction(self.light_theme_action)
+        view_menu.addSeparator()
+        self.workspace_dock_actions: dict[str, QAction] = {}
+        for name, dock in self._workspace_docks.items():
+            action = QAction(_tr("Show {panel}").format(panel=dock.windowTitle()), self)
+            action.setObjectName(f"show_{name}_dock_action")
+            action.triggered.connect(
+                lambda _checked=False, target=dock: self._activate_dock(target)
+            )
+            view_menu.addAction(action)
+            self.workspace_dock_actions[name] = action
         help_menu = self.menuBar().addMenu(_tr("Help"))
         help_menu.addAction(self.about_action)
         self.export_diagnostics_action.triggered.connect(self._choose_diagnostics_destination)

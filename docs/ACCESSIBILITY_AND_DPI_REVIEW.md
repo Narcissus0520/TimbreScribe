@@ -9,6 +9,7 @@
 | Keyboard focus | Buttons, tool buttons, combos, spin boxes, text inputs and tabs have a visible 2 px blue focus border; native menus/toolbars/tabs retain keyboard navigation | Implemented |
 | Accessible names | Main workspaces, score/waveform/piano-roll/Verovio canvases, generated XML, Mock controls, diagnostics, progress, and About license panes have semantic names | Automated construction coverage |
 | Text scaling/layout | Qt layouts and scrollable/dockable workspaces are used; no bitmap-rendered UI text is required | Code review passed |
+| Dock reachability | Initial left/right/bottom proportions prevent title-bar-only collapse; MuScriptor and notation forms scroll; named `View` actions activate every dock without relying on truncated tab labels | GUI regression test and live-window review passed |
 | Non-color state | Worker state, diagnostics, confidence, destructive assistant diff, unavailable engines, and Mock/Test identity use text in addition to color | Code/GUI review passed |
 | Light-theme path | View menu toggle is persisted through `QSettings` and can be reversed | GUI test passed |
 

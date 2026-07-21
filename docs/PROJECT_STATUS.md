@@ -30,6 +30,7 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 - Added pinned Inno Setup 7.0.2 per-user installer with optional shortcuts, HKCU `.timbrescribe` association, in-place upgrade preservation, uninstall association cleanup, and explicit managed model/cache/log cleanup prompt that never targets projects/settings/recovery/credentials.
 - Added packaged GUI, Mock protocol/artifact, Basic Pitch preload, model allowlist, notice, and manifest tests; added installed GUI/association/upgrade/uninstall preservation automation and a manual pristine Windows matrix.
 - Added bounded redacted crash records/diagnostic ZIPs, scoped cache/log cleanup, high-DPI initialization, persistent light/dark themes, visible keyboard focus, semantic accessible names, and About tabs for version/licenses/inventory/model/privacy.
+- Fixed first-launch dock collapse with explicit initial proportions, scrollable MuScriptor/notation forms, and keyboard/menu-reachable actions for every dock; the regression is covered by a live-widget GUI test.
 - Added user guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADR 0018.
 
 ## Phase 8 acceptance matrix

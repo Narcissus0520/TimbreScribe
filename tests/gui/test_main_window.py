@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QTabWidget
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QDockWidget, QScrollArea, QTabWidget
 from pytestqt.qtbot import QtBot
 
 from timbrescribe.ui import MainWindow
@@ -26,6 +27,37 @@ def test_launch_and_successful_visible_score(main_window: MainWindow, qtbot: QtB
     assert main_window.musicxml_preview.toPlainText().startswith("<?xml")
     assert main_window.export_musicxml_action.isEnabled()
     assert main_window.export_midi_action.isEnabled()
+
+
+def test_default_docks_and_muscriptor_controls_are_reachable(
+    main_window: MainWindow,
+    qtbot: QtBot,
+) -> None:
+    qtbot.waitUntil(lambda: main_window.width() > 0)
+    left_dock = main_window.findChild(QDockWidget, "sourceMediaDock")
+    right_dock = main_window.findChild(QDockWidget, "scoreInspectorDock")
+    diagnostics_dock = main_window.findChild(QDockWidget, "diagnosticsDock")
+    muscriptor_scroll = main_window.muscriptor_workspace.findChild(
+        QScrollArea, "muscriptorScrollArea"
+    )
+    notation_scroll = main_window.notation_workspace.findChild(QScrollArea, "notationScrollArea")
+    show_muscriptor = main_window.findChild(QAction, "show_muscriptor_dock_action")
+
+    assert left_dock is not None
+    assert right_dock is not None
+    assert diagnostics_dock is not None
+    assert muscriptor_scroll is not None
+    assert notation_scroll is not None
+    assert show_muscriptor is not None
+    assert muscriptor_scroll.widgetResizable()
+    assert notation_scroll.widgetResizable()
+    assert left_dock.width() >= 280
+    assert right_dock.width() >= 180
+    assert diagnostics_dock.height() >= 110
+    assert main_window.media_workspace.isVisible()
+
+    show_muscriptor.trigger()
+    qtbot.waitUntil(main_window.muscriptor_workspace.isVisible)
 
 
 def test_gui_exports_unicode_paths(main_window: MainWindow, qtbot: QtBot, tmp_path: Path) -> None:
