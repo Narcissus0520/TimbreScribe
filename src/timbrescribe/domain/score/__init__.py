@@ -16,6 +16,7 @@ from timbrescribe.domain.score.models import (
     TempoEvent,
     TempoMap,
 )
+from timbrescribe.domain.score.selection import select_score_parts
 
 __all__ = [
     "InstrumentProfile",
@@ -32,4 +33,5 @@ __all__ = [
     "ScoreProject",
     "TempoEvent",
     "TempoMap",
+    "select_score_parts",
 ]

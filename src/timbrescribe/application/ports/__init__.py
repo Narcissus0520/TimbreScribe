@@ -2,6 +2,7 @@
 
 from timbrescribe.application.ports.export import MidiExportPort, MusicXmlExportPort
 from timbrescribe.application.ports.media import MediaProbePort
+from timbrescribe.application.ports.models import CredentialStore, ModelAcceptancePort
 from timbrescribe.application.ports.project import (
     ProjectArchivePort,
     ProjectLoadResult,
@@ -10,8 +11,10 @@ from timbrescribe.application.ports.project import (
 )
 
 __all__ = [
+    "CredentialStore",
     "MediaProbePort",
     "MidiExportPort",
+    "ModelAcceptancePort",
     "MusicXmlExportPort",
     "ProjectArchivePort",
     "ProjectLoadResult",

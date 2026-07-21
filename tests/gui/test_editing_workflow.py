@@ -5,6 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMessageBox
 from pytestqt.qtbot import QtBot
+from tests.factories import make_muscriptor_raw_transcription
 
 from timbrescribe.ui import MainWindow
 
@@ -180,3 +181,47 @@ def test_unsaved_close_cancel_preserves_open_project(
     assert main_window.isVisible()
     main_window.undo_action.trigger()
     assert not controller.dirty
+
+
+def test_multi_part_navigation_mapping_and_part_exports(
+    main_window: MainWindow,
+    qtbot: QtBot,
+    tmp_path: Path,
+) -> None:
+    notation = main_window.notation_controller
+    controller = main_window.editing_controller
+    assert notation is not None and controller is not None
+    notation.set_raw_transcription(make_muscriptor_raw_transcription())
+    main_window.notation_workspace.generate_button.click()
+    qtbot.waitUntil(
+        lambda: controller.session is not None and len(controller.session.project.score.parts) == 3,
+        timeout=5_000,
+    )
+
+    workspace = main_window.editing_workspace
+    assert workspace.part_view.count() == 4
+    unknown_id = controller.session.project.score.parts[2].id
+    workspace.part_view.setCurrentIndex(workspace.part_view.findData(unknown_id))
+    assert workspace.roll.note_count == 1
+    assert main_window.export_part_musicxml_action.isEnabled()
+    assert main_window.export_part_midi_action.isEnabled()
+    assert not main_window.export_mxl_action.isEnabled()
+    assert main_window.export_part_musicxml(unknown_id, tmp_path / "unknown.musicxml").is_file()
+    assert main_window.export_part_midi(unknown_id, tmp_path / "unknown.mid").is_file()
+
+    workspace.instrument_profile.setCurrentIndex(workspace.instrument_profile.findData("flute"))
+    workspace.apply_profile_button.click()
+    remapped = next(
+        part for part in controller.session.project.score.parts if part.id == unknown_id
+    )
+    assert remapped.instrument_profile is not None
+    assert remapped.instrument_profile.id == "flute"
+    assert controller.session.project.raw_transcription.notes[2].instrument_label == (
+        "provider_future_instrument"
+    )
+    main_window.undo_action.trigger()
+    restored = next(
+        part for part in controller.session.project.score.parts if part.id == unknown_id
+    )
+    assert restored.instrument_profile is not None
+    assert restored.instrument_profile.id == "generic-instrument"

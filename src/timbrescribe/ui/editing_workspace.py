@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from timbrescribe.domain.notation import INSTRUMENT_PROFILES
 from timbrescribe.domain.project import EditingProject, compare_raw_and_edited
 from timbrescribe.domain.score import ScoreNote
 
@@ -38,6 +39,7 @@ class EditablePianoRollWidget(QWidget):
         self._project: EditingProject | None = None
         self._selected: tuple[str, ...] = ()
         self._raw_overlay = True
+        self._part_filter: str | None = None
         self._playhead = Fraction(0)
         self._loop: tuple[Fraction, Fraction] | None = None
         self._drag_origin: QPointF | None = None
@@ -57,7 +59,7 @@ class EditablePianoRollWidget(QWidget):
 
     @property
     def note_count(self) -> int:
-        return len(self._project.score.all_notes) if self._project is not None else 0
+        return len(self._visible_notes())
 
     def set_project(self, project: EditingProject) -> None:
         self._project = project
@@ -65,6 +67,13 @@ class EditablePianoRollWidget(QWidget):
         self._selected = tuple(note_id for note_id in self._selected if note_id in valid)
         self.update()
         self.selection_changed.emit(self._selected)
+
+    def set_part_filter(self, part_id: str | None) -> None:
+        self._part_filter = part_id
+        visible = {note.id for note in self._visible_notes()}
+        self._selected = tuple(note_id for note_id in self._selected if note_id in visible)
+        self.selection_changed.emit(self._selected)
+        self.update()
 
     def set_raw_overlay(self, visible: bool) -> None:
         self._raw_overlay = visible
@@ -108,8 +117,13 @@ class EditablePianoRollWidget(QWidget):
             )
             return
         if self._raw_overlay:
+            visible_sources = {
+                source_id for note in self._visible_notes() for source_id in note.source_note_ids
+            }
             painter.setPen(QPen(QColor("#8d98ab"), 1, Qt.PenStyle.DashLine))
             for raw_note in self._project.raw_transcription.notes:
+                if self._part_filter is not None and raw_note.id not in visible_sources:
+                    continue
                 start = Fraction(str(raw_note.onset_seconds)) * Fraction(
                     self._project.score.tempo_bpm, 60
                 )
@@ -128,7 +142,7 @@ class EditablePianoRollWidget(QWidget):
                     )
                 )
         selected = set(self._selected)
-        for score_note in self._project.score.all_notes:
+        for score_note in self._visible_notes():
             rect = self._note_rect(score_note)
             if score_note.id in selected:
                 color = QColor("#ffb454")
@@ -216,7 +230,7 @@ class EditablePianoRollWidget(QWidget):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_A:
             if self._project is not None:
-                self._set_selection(tuple(note.id for note in self._project.score.all_notes))
+                self._set_selection(tuple(note.id for note in self._visible_notes()))
             return
         if event.key() in {Qt.Key.Key_Delete, Qt.Key.Key_Backspace} and self._selected:
             self.delete_requested.emit(self._selected)
@@ -249,7 +263,7 @@ class EditablePianoRollWidget(QWidget):
         return next(
             (
                 note
-                for note in reversed(self._project.score.all_notes)
+                for note in reversed(self._visible_notes())
                 if self._note_rect(note).adjusted(-2, -2, 2, 2).contains(position)
             ),
             None,
@@ -272,11 +286,17 @@ class EditablePianoRollWidget(QWidget):
         pitches = [60]
         total = Fraction(4)
         if self._project is not None:
-            pitches.extend(note.sounding_pitch for note in self._project.score.all_notes)
-            pitches.extend(note.pitch_midi for note in self._project.raw_transcription.notes)
+            visible = self._visible_notes()
+            pitches.extend(note.sounding_pitch for note in visible)
+            visible_sources = {source_id for note in visible for source_id in note.source_note_ids}
+            pitches.extend(
+                note.pitch_midi
+                for note in self._project.raw_transcription.notes
+                if self._part_filter is None or note.id in visible_sources
+            )
             total = max(
                 self._project.score.measure_duration_beats,
-                max((note.end_beat for note in self._project.score.all_notes), default=Fraction(0)),
+                max((note.end_beat for note in visible), default=Fraction(0)),
             )
             measure = self._project.score.measure_duration_beats
             total = ((total + measure - Fraction(1, 960)) // measure) * measure
@@ -323,6 +343,15 @@ class EditablePianoRollWidget(QWidget):
             quotient += 1
         return sign * quotient * grid
 
+    def _visible_notes(self) -> tuple[ScoreNote, ...]:
+        if self._project is None:
+            return ()
+        if self._part_filter is None:
+            return self._project.score.all_notes
+        return tuple(
+            note for note in self._project.score.all_notes if note.part_id == self._part_filter
+        )
+
 
 class EditingWorkspace(QWidget):
     """Editing surface plus a stable-ID selection inspector and loop transport."""
@@ -333,6 +362,8 @@ class EditingWorkspace(QWidget):
     pause_requested = Signal()
     stop_requested = Signal()
     loop_requested = Signal(bool, object, object)
+    part_view_changed = Signal(object)
+    part_profile_requested = Signal(str, str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -357,11 +388,14 @@ class EditingWorkspace(QWidget):
         self.add_button = QPushButton(self.tr("Add note"), self)
         self.delete_button = QPushButton(self.tr("Delete selection"), self)
         self.delete_button.setEnabled(False)
+        self.part_view = QComboBox(self)
 
         controls = QHBoxLayout()
         controls.addWidget(self.raw_overlay)
         controls.addWidget(QLabel(self.tr("Snap"), self))
         controls.addWidget(self.snap)
+        controls.addWidget(QLabel(self.tr("Score view"), self))
+        controls.addWidget(self.part_view)
         controls.addWidget(self.add_button)
         controls.addWidget(self.delete_button)
         controls.addStretch(1)
@@ -384,6 +418,12 @@ class EditingWorkspace(QWidget):
         self.duration.setRange(0.0001, 100_000)
         self.duration.setDecimals(4)
         self.part = QComboBox(inspector)
+        self.instrument_profile = QComboBox(inspector)
+        for profile in sorted(
+            INSTRUMENT_PROFILES.values(), key=lambda item: item.display_name.casefold()
+        ):
+            self.instrument_profile.addItem(profile.display_name, profile.id)
+        self.apply_profile_button = QPushButton(self.tr("Apply part instrument"), inspector)
         self.staff = QSpinBox(inspector)
         self.staff.setRange(1, 16)
         self.voice = QSpinBox(inspector)
@@ -399,6 +439,8 @@ class EditingWorkspace(QWidget):
         inspector_layout.addRow(self.tr("Start beat"), self.start)
         inspector_layout.addRow(self.tr("Duration beats"), self.duration)
         inspector_layout.addRow(self.tr("Part"), self.part)
+        inspector_layout.addRow(self.tr("Part instrument"), self.instrument_profile)
+        inspector_layout.addRow(self.apply_profile_button)
         inspector_layout.addRow(self.tr("Staff"), self.staff)
         inspector_layout.addRow(self.tr("Voice"), self.voice)
         inspector_layout.addRow(self.tr("Velocity"), self.velocity)
@@ -420,6 +462,11 @@ class EditingWorkspace(QWidget):
     def selected_ids(self) -> tuple[str, ...]:
         return self._selection
 
+    @property
+    def selected_part_id(self) -> str | None:
+        value = self.part_view.currentData()
+        return value if isinstance(value, str) else None
+
     def set_project(self, project: EditingProject) -> None:
         self._project = project
         self.roll.set_project(project)
@@ -436,9 +483,19 @@ class EditingWorkspace(QWidget):
             self.snap.blockSignals(True)
             self.snap.setCurrentIndex(current)
             self.snap.blockSignals(False)
+        selected_view = self.selected_part_id
         self.part.clear()
+        self.part_view.blockSignals(True)
+        self.part_view.clear()
+        self.part_view.addItem(self.tr("Total score"), None)
         for part in project.score.parts:
             self.part.addItem(part.name, part.id)
+            self.part_view.addItem(part.name, part.id)
+        selected_index = self.part_view.findData(selected_view)
+        self.part_view.setCurrentIndex(max(0, selected_index))
+        self.part_view.blockSignals(False)
+        self.roll.set_part_filter(self.selected_part_id)
+        self._select_part_profile(self.selected_part_id)
         comparison = compare_raw_and_edited(project)
         self.comparison_label.setText(
             self.tr(
@@ -463,11 +520,13 @@ class EditingWorkspace(QWidget):
 
     def _connect_signals(self) -> None:
         self.raw_overlay.toggled.connect(self.roll.set_raw_overlay)
+        self.part_view.currentIndexChanged.connect(self._part_view_changed)
         self.snap.currentIndexChanged.connect(
             lambda _index: self.requantize_requested.emit(self.snap.currentData())
         )
         self.roll.selection_changed.connect(self._selection_changed)
         self.apply_button.clicked.connect(self._apply_properties)
+        self.apply_profile_button.clicked.connect(self._apply_profile)
         self.play_button.clicked.connect(self.play_requested)
         self.pause_button.clicked.connect(self.pause_requested)
         self.stop_button.clicked.connect(self.stop_requested)
@@ -497,6 +556,13 @@ class EditingWorkspace(QWidget):
         self.start.setValue(float(note.start_beat))
         self.duration.setValue(float(note.duration_beats))
         self.part.setCurrentIndex(self.part.findData(note.part_id))
+        selected_part = next(part for part in self._project.score.parts if part.id == note.part_id)
+        profile_id = (
+            selected_part.instrument_profile.id
+            if selected_part.instrument_profile is not None
+            else "generic-instrument"
+        )
+        self.instrument_profile.setCurrentIndex(self.instrument_profile.findData(profile_id))
         self.staff.setValue(note.staff)
         self.voice.setValue(note.voice)
         event = next(item for item in self._project.edited_events if item.id == note.id)
@@ -529,6 +595,40 @@ class EditingWorkspace(QWidget):
             default=Fraction(0),
         )
         self.roll.add_requested.emit(start, 60)
+
+    def _part_view_changed(self, _index: int) -> None:
+        self.roll.set_part_filter(self.selected_part_id)
+        self._select_part_profile(self.selected_part_id)
+        self.part_view_changed.emit(self.selected_part_id)
+
+    def _apply_profile(self) -> None:
+        if self._project is None:
+            return
+        part_id = self.selected_part_id
+        if part_id is None and len(self._selection) == 1:
+            note = next(
+                note for note in self._project.score.all_notes if note.id == self._selection[0]
+            )
+            part_id = note.part_id
+        profile_id = self.instrument_profile.currentData()
+        if isinstance(part_id, str) and isinstance(profile_id, str):
+            self.part_profile_requested.emit(part_id, profile_id)
+
+    def _select_part_profile(self, part_id: str | None) -> None:
+        if self._project is None or part_id is None:
+            return
+        part = next(
+            (candidate for candidate in self._project.score.parts if candidate.id == part_id),
+            None,
+        )
+        if part is None:
+            return
+        profile_id = (
+            part.instrument_profile.id
+            if part.instrument_profile is not None
+            else "generic-instrument"
+        )
+        self.instrument_profile.setCurrentIndex(self.instrument_profile.findData(profile_id))
 
     def _emit_loop(self, enabled: bool) -> None:
         if not enabled or self._project is None or not self._selection:

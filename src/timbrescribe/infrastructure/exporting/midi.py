@@ -72,7 +72,7 @@ class MidiExporter:
     def _append_conductor_track(midi: MidiFile, score: ScoreDocument) -> None:
         track = MidiTrack()
         midi.tracks.append(track)
-        track.append(MetaMessage("track_name", name=score.title, time=0))
+        track.append(MetaMessage("track_name", name=_midi_text(score.title), time=0))
         track.append(MetaMessage("set_tempo", tempo=bpm2tempo(score.tempo_bpm), time=0))
         track.append(
             MetaMessage(
@@ -89,7 +89,7 @@ class MidiExporter:
     def _append_part_track(self, midi: MidiFile, part: Part) -> None:
         track = MidiTrack()
         midi.tracks.append(track)
-        track.append(MetaMessage("track_name", name=part.name, time=0))
+        track.append(MetaMessage("track_name", name=_midi_text(part.name), time=0))
         track.append(
             Message("program_change", channel=part.midi_channel, program=part.midi_program, time=0)
         )
@@ -140,3 +140,9 @@ class MidiExporter:
                 "Use a supported quantization grid.",
             )
         return value.numerator
+
+
+def _midi_text(value: str) -> str:
+    """Encode deterministic safe SMF text for mido's Latin-1 text boundary."""
+
+    return value.encode("latin-1", errors="replace").decode("latin-1")

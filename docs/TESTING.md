@@ -34,6 +34,35 @@ uv run --group basic-pitch python benchmarks/basic_pitch_cpu.py path/to/decoded.
 
 The JSON records hardware, Python/engine/runtime/model identity, model hash, input duration/size, settings, cold/warm runtime, detected-note count, and Windows peak working set. Benchmark output belongs outside version control unless a milestone explicitly selects a fixture/result.
 
+## Optional gated MuScriptor model suite
+
+The default suite does not install MuScriptor/Torch, use credentials, download weights, or accept third-party terms. Installing the pinned MIT engine code is a separate explicit step and does not download or accept model weights:
+
+```powershell
+# CPU is the default and remains the portable fallback.
+./tools/setup_muscriptor.ps1
+
+# Optional Windows x64 CUDA 12.6 runtime after a successful GPU preflight.
+# This downloads the exact official PyTorch 2.13.0+cu126 wheel (about 2.42 GiB)
+# and verifies its pinned SHA-256 URL fragment plus a real CUDA tensor.
+./tools/setup_muscriptor.ps1 -TorchRuntime cuda126
+```
+
+The CUDA override is local to `.venv`; an ordinary `uv sync` can restore the locked CPU Torch build, so rerun the explicit CUDA setup before a CUDA model gate. `-VerifyOnly -TorchRuntime cuda126` checks an existing CUDA environment without downloading or changing it.
+
+Then use the in-app **MuScriptor (Experimental / Non-Commercial)** panel to review and explicitly accept the exact Small revision, save a Hugging Face token in the operating-system credential store, and install the hash-verified model. Do not automate or infer that legal acceptance. Run the real-model gate only with local material for which the operator has confirmed all necessary rights:
+
+```powershell
+$env:TIMBRESCRIBE_RUN_MUSCRIPTOR_MODEL_TESTS = "1"
+$env:TIMBRESCRIBE_MUSCRIPTOR_TEST_MEDIA_RIGHTS = "1"
+$env:TIMBRESCRIBE_MUSCRIPTOR_TEST_AUDIO = "C:\approved\multi-instrument.wav"
+# Optional: cpu is the default; set cuda only after the UI preflight succeeds.
+$env:TIMBRESCRIBE_MUSCRIPTOR_DEVICE = "cuda"
+uv run --group muscriptor pytest -q --no-cov -m model tests/model/test_muscriptor_model.py
+```
+
+The gate requires the exact verified Small revision and its local acceptance record, runs the real isolated worker, requires at least two engine labels, converts them into at least two score parts, and retains model/device/terms/rights provenance. It deliberately has no generated substitute because synthetic tones do not establish multi-instrument recognition quality. Medium is exposed only after Small verifies and remains experimental; it has no separate milestone acceptance claim.
+
 ## Project archive benchmark
 
 ```powershell
@@ -42,13 +71,13 @@ uv run python benchmarks/project_archive.py --notes 1000
 
 The JSON reports the application/Python/platform identity, note count, archive size, save/load wall time, peak traced Python memory, and verified round-trip project ID.
 
-## Test layers through Phase 4
+## Test layers through Phase 5
 
-- Unit/property: source-media invariants, cache keys/cleanup, waveform/playback/loop state, raw/settings/provenance validation, Basic Pitch normalization/error boundaries, exact quantization, command execute/undo/redo, stale-version rejection, project migrations, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
-- Contract: protocol v1 parsing, Basic Pitch request settings, unknown-field compatibility, incompatible-version errors, stdout JSONL discipline, progress, warning, result, failure, and cancellation.
-- Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, result loading, pinned Verovio 6.2.1 multi-page rendering, secure `.timbrescribe` round trips, and SVG/PNG/vector-PDF export.
-- GUI: offscreen media responsiveness, Mock paths, Basic Pitch persistent-client reuse, confidence-filtered raw roll, keyboard/multi-selection editing, inspector commands, undo/redo, save/reopen, stale-result rejection, unsaved-close prompts, reviewed notation controls, Verovio page state, professional exports, raw MIDI export, and forced-cancel no-promotion behavior using `pytest-qt`.
-- Model (opt-in): exact Basic Pitch/ONNX availability, real CPU inference, persistent model reuse, provenance, and Qt responsiveness.
+- Unit/property: source-media invariants, cache keys/cleanup, waveform/playback/loop state, raw/settings/provenance validation, Basic Pitch and MuScriptor normalization/error boundaries, exact quantization, multi-part grouping/projection, editable instrument mapping, command execute/undo/redo, stale-version rejection, project migrations, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
+- Contract: protocol v1 parsing, Basic Pitch and MuScriptor request settings, gated terms/rights/local-safetensors validation, unknown-field compatibility, incompatible-version errors, stdout JSONL discipline, progress, warning, result, failure, and cancellation. No credential is a protocol field.
+- Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, MuScriptor process startup without optional imports, result loading, pinned Verovio 6.2.1 multi-page rendering, secure `.timbrescribe` round trips, and SVG/PNG/vector-PDF export.
+- GUI: offscreen media responsiveness, Mock paths, fully functional model-absent startup, Basic Pitch persistent-client reuse, confidence-filtered raw roll, total/part navigation, part-profile remapping and part exports, keyboard/multi-selection editing, inspector commands, undo/redo, save/reopen, stale-result rejection, unsaved-close prompts, reviewed notation controls, Verovio page state, professional exports, raw MIDI export, and forced-cancel no-promotion behavior using `pytest-qt`.
+- Model (opt-in): exact Basic Pitch/ONNX availability, real CPU inference, persistent model reuse, provenance, and Qt responsiveness; separately gated exact MuScriptor Small inference on explicitly approved local multi-instrument material.
 
 ## Manual smoke test
 
@@ -74,5 +103,9 @@ Then:
 14. Toggle the raw-evidence overlay, enable a selection loop, and confirm the red playhead follows source playback or the score-only preview clock.
 15. Save to a Unicode/spaced `.timbrescribe` path, reopen it, and confirm stable IDs and edits; simulate a later edit during a Mock job and confirm the stale result is rejected.
 16. Trigger an autosave, restart with the recovery file present, and confirm recovery is offered without overwriting the primary project.
+17. With no MuScriptor package or model installed, open its panel and confirm the rest of the application still imports, edits, and exports normally while the model action reports an actionable unavailable state.
+18. Review the visible experimental/non-commercial notice and exact Small terms; confirm install is blocked before acceptance and that Medium is disabled before Small verifies.
+19. After explicit acceptance and credential setup, install Small, confirm its exact revision/hash/status, select CPU or CUDA after preflight, confirm source-media rights for this run, and exercise multi-part total/part navigation and MusicXML/MIDI exports.
+20. Simulate cancellation, worker crash, and out-of-memory and confirm no partial result replaces the current project. Change an unknown-label part to another instrument profile and undo it while the raw label remains unchanged.
 
 Pinned Verovio integration is automated. Do not claim the external MuseScore round trip until MuseScore 4 is explicitly installed and used; the current development machine reports it unavailable.

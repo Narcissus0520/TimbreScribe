@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
 from timbrescribe.domain.transcription import (
     EngineRunProvenance,
+    MuscriptorSettingsSnapshot,
     RawNoteEvent,
     RawTranscription,
     TranscriptionSettingsSnapshot,
@@ -78,5 +79,10 @@ def load_transcription_artifact(path: Path, *, expected_job_id: str) -> RawTrans
         ),
         provenance=(
             EngineRunProvenance(**artifact.run.model_dump()) if artifact.run is not None else None
+        ),
+        muscriptor_settings=(
+            MuscriptorSettingsSnapshot(**artifact.muscriptor_settings.model_dump())
+            if artifact.muscriptor_settings is not None
+            else None
         ),
     )

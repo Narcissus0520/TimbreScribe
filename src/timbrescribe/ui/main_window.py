@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from timbrescribe.application import JobManager, PhaseZeroService, ScorePresentation
+from timbrescribe.domain.engines import EngineDescriptor
 from timbrescribe.domain.errors import TimbreScribeError
 from timbrescribe.domain.transcription import RawTranscription
 from timbrescribe.infrastructure.basic_pitch import BasicPitchAvailability
@@ -32,6 +33,7 @@ from timbrescribe.infrastructure.workers.qt_mock_client import QtMockWorkerClien
 from timbrescribe.ui.basic_pitch_workspace import BasicPitchWorkspace
 from timbrescribe.ui.editing_workspace import EditingWorkspace
 from timbrescribe.ui.media_workspace import MediaWorkspace
+from timbrescribe.ui.muscriptor_workspace import MuscriptorWorkspace
 from timbrescribe.ui.notation_workspace import NotationWorkspace
 from timbrescribe.ui.piano_roll import PianoRollWidget
 from timbrescribe.ui.score_preview import ScorePreviewWidget
@@ -43,6 +45,7 @@ if TYPE_CHECKING:
     from timbrescribe.ui.basic_pitch_controller import BasicPitchController
     from timbrescribe.ui.editing_controller import EditingController
     from timbrescribe.ui.media_controller import MediaWorkflowController
+    from timbrescribe.ui.muscriptor_controller import MuscriptorController
     from timbrescribe.ui.notation_controller import NotationController
 
 
@@ -59,6 +62,7 @@ class MainWindow(QMainWindow):
         worker: QtMockWorkerClient,
         jobs: JobManager,
         basic_pitch_availability: BasicPitchAvailability,
+        muscriptor_descriptor: EngineDescriptor,
         musescore_availability: MuseScoreAvailability,
     ) -> None:
         super().__init__()
@@ -70,6 +74,7 @@ class MainWindow(QMainWindow):
         self._presentation: ScorePresentation | None = None
         self._media_controller: MediaWorkflowController | None = None
         self._basic_pitch_controller: BasicPitchController | None = None
+        self._muscriptor_controller: MuscriptorController | None = None
         self._notation_controller: NotationController | None = None
         self._editing_controller: EditingController | None = None
         self._mock_start_token: ProjectVersionToken | None = None
@@ -103,10 +108,14 @@ class MainWindow(QMainWindow):
         self.cancel_action = QAction(_tr("取消"), self)
         self.cancel_action.setShortcut("Esc")
         self.cancel_action.setEnabled(False)
-        self.export_musicxml_action = QAction(_tr("导出 MusicXML"), self)
+        self.export_musicxml_action = QAction(_tr("导出总谱 MusicXML"), self)
         self.export_musicxml_action.setEnabled(False)
-        self.export_midi_action = QAction(_tr("导出 MIDI"), self)
+        self.export_midi_action = QAction(_tr("导出总谱 MIDI"), self)
         self.export_midi_action.setEnabled(False)
+        self.export_part_musicxml_action = QAction(_tr("导出当前分谱 MusicXML"), self)
+        self.export_part_musicxml_action.setEnabled(False)
+        self.export_part_midi_action = QAction(_tr("导出当前分谱 MIDI"), self)
+        self.export_part_midi_action.setEnabled(False)
         self.run_basic_pitch_action = QAction(_tr("运行 Basic Pitch"), self)
         self.run_basic_pitch_action.setEnabled(basic_pitch_availability.available)
         self.cancel_basic_pitch_action = QAction(_tr("取消 Basic Pitch"), self)
@@ -149,6 +158,7 @@ class MainWindow(QMainWindow):
 
         self.media_workspace = MediaWorkspace(self)
         self.basic_pitch_workspace = BasicPitchWorkspace(basic_pitch_availability, self)
+        self.muscriptor_workspace = MuscriptorWorkspace(muscriptor_descriptor, self)
         self.notation_workspace = NotationWorkspace(self)
 
         self.scenario_combo = QComboBox(self)
@@ -234,6 +244,30 @@ class MainWindow(QMainWindow):
         controller.presentation_ready.connect(self._adopt_notation_presentation)
         if self._basic_pitch_controller is not None:
             self._basic_pitch_controller.raw_changed.connect(controller.set_raw_transcription)
+        if self._muscriptor_controller is not None:
+            self._muscriptor_controller.raw_changed.connect(controller.set_raw_transcription)
+
+    @property
+    def notation_controller(self) -> NotationController | None:
+        return self._notation_controller
+
+    @property
+    def muscriptor_controller(self) -> MuscriptorController | None:
+        return self._muscriptor_controller
+
+    def attach_muscriptor_controller(self, controller: MuscriptorController) -> None:
+        """Attach optional gated-model management and isolated inference."""
+
+        if self._muscriptor_controller is not None:
+            raise RuntimeError("A MuScriptor controller is already attached")
+        self._muscriptor_controller = controller
+        controller.setParent(self)
+        controller.diagnostic.connect(self._append_diagnostic)
+        controller.status.connect(self.statusBar().showMessage)
+        controller.progress.connect(self.progress_bar.setValue)
+        controller.error.connect(self._show_error)
+        if self._notation_controller is not None:
+            controller.raw_changed.connect(self._notation_controller.set_raw_transcription)
 
     @property
     def editing_controller(self) -> EditingController | None:
@@ -253,6 +287,7 @@ class MainWindow(QMainWindow):
         controller.status.connect(self.statusBar().showMessage)
         controller.error.connect(self._show_error)
         controller.recovery_available.connect(self._show_recovery_offer)
+        self.editing_workspace.part_view_changed.connect(self._on_part_view_changed)
         self.save_project_action.setEnabled(controller.session is not None)
         self.save_project_as_action.setEnabled(controller.session is not None)
 
@@ -304,6 +339,12 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, basic_pitch_dock)
         self.tabifyDockWidget(media_dock, basic_pitch_dock)
 
+        muscriptor_dock = QDockWidget(_tr("MuScriptor（实验/非商业）"), self)
+        muscriptor_dock.setObjectName("muscriptorDock")
+        muscriptor_dock.setWidget(self.muscriptor_workspace)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, muscriptor_dock)
+        self.tabifyDockWidget(media_dock, muscriptor_dock)
+
         notation_dock = QDockWidget(_tr("乐谱整理"), self)
         notation_dock.setObjectName("notationReviewDock")
         notation_dock.setWidget(self.notation_workspace)
@@ -335,6 +376,8 @@ class MainWindow(QMainWindow):
         self.cancel_action.triggered.connect(self.cancel_active_job)
         self.export_musicxml_action.triggered.connect(self._choose_musicxml_destination)
         self.export_midi_action.triggered.connect(self._choose_midi_destination)
+        self.export_part_musicxml_action.triggered.connect(self._choose_part_musicxml_destination)
+        self.export_part_midi_action.triggered.connect(self._choose_part_midi_destination)
         self.export_mxl_action.triggered.connect(lambda: self._choose_visual_destination("mxl"))
         self.export_svg_action.triggered.connect(lambda: self._choose_visual_destination("svg"))
         self.export_png_action.triggered.connect(lambda: self._choose_visual_destination("png"))
@@ -353,6 +396,8 @@ class MainWindow(QMainWindow):
         for action in (
             self.export_musicxml_action,
             self.export_midi_action,
+            self.export_part_musicxml_action,
+            self.export_part_midi_action,
             self.export_mxl_action,
             self.export_svg_action,
             self.export_png_action,
@@ -414,6 +459,18 @@ class MainWindow(QMainWindow):
         presentation = self._require_presentation()
         return self._service.export_midi(presentation, destination)
 
+    def export_part_musicxml(self, part_id: str, destination: Path) -> Path:
+        controller = self._require_notation_controller()
+        return controller.service.export_part_musicxml(
+            self._require_presentation(), part_id, destination
+        )
+
+    def export_part_midi(self, part_id: str, destination: Path) -> Path:
+        controller = self._require_notation_controller()
+        return controller.service.export_part_midi(
+            self._require_presentation(), part_id, destination
+        )
+
     def export_mxl(self, destination: Path) -> Path:
         controller = self._require_notation_controller()
         return controller.service.export_mxl(self._require_presentation(), destination)
@@ -445,26 +502,17 @@ class MainWindow(QMainWindow):
         if not isinstance(value, ScorePresentation):
             return
         self._presentation = value
-        score = value.project.score
-        self.score_preview.set_score(score)
-        self.musicxml_preview.setPlainText(value.musicxml)
-        self.verovio_view.set_musicxml(value.musicxml)
-        self.inspector_label.setText(
-            _tr(
-                "标题：{title}\n音符：{notes}\n小节：{measures}\n速度：{tempo} BPM\n"
-                "拍号：{beats}/{unit}"
-            ).format(
-                title=score.title,
-                notes=len(score.all_notes),
-                measures=score.measure_count,
-                tempo=score.tempo_bpm,
-                beats=score.beats_per_measure,
-                unit=score.beat_unit,
-            )
+        selected_part = self.editing_workspace.selected_part_id
+        if selected_part is not None and all(
+            part.id != selected_part for part in value.project.score.parts
+        ):
+            selected_part = None
+        displayed = (
+            self._require_notation_controller().service.project_part(value, selected_part)
+            if selected_part is not None
+            else value
         )
-        self.export_musicxml_action.setEnabled(True)
-        self.export_midi_action.setEnabled(True)
-        self._set_advanced_exports_enabled(True)
+        self._display_presentation(displayed, selected_part)
         self.save_project_action.setEnabled(self._editing_controller is not None)
         self.save_project_as_action.setEnabled(self._editing_controller is not None)
         self.tabs.setCurrentIndex(
@@ -472,6 +520,55 @@ class MainWindow(QMainWindow):
             if self._editing_controller is not None
             else self.verovio_tab_index
         )
+
+    def _display_presentation(
+        self,
+        value: ScorePresentation,
+        selected_part: str | None,
+    ) -> None:
+        score = value.project.score
+        self.score_preview.set_score(score)
+        self.musicxml_preview.setPlainText(value.musicxml)
+        self.verovio_view.set_musicxml(value.musicxml)
+        self.inspector_label.setText(
+            _tr(
+                "标题：{title}\n音符：{notes}\n小节：{measures}\n速度：{tempo} BPM\n"
+                "拍号：{beats}/{unit}\n视图：{view}"
+            ).format(
+                title=score.title,
+                notes=len(score.all_notes),
+                measures=score.measure_count,
+                tempo=score.tempo_bpm,
+                beats=score.beats_per_measure,
+                unit=score.beat_unit,
+                view=score.parts[0].name if selected_part is not None else _tr("总谱"),
+            )
+        )
+        self.export_musicxml_action.setEnabled(True)
+        self.export_midi_action.setEnabled(True)
+        self.export_part_musicxml_action.setEnabled(selected_part is not None)
+        self.export_part_midi_action.setEnabled(selected_part is not None)
+        self._set_advanced_exports_enabled(selected_part is None)
+
+    def _on_part_view_changed(self, value: object) -> None:
+        presentation = self._presentation
+        if presentation is None:
+            return
+        part_id = value if isinstance(value, str) else None
+        try:
+            displayed = (
+                self._require_notation_controller().service.project_part(presentation, part_id)
+                if part_id is not None
+                else presentation
+            )
+        except ValueError as exc:
+            self._show_error(
+                _tr("无法切换分谱"),
+                str(exc),
+                _tr("请选择当前总谱中仍存在的分谱。"),
+            )
+            return
+        self._display_presentation(displayed, part_id)
 
     def _on_progress(self, job_id: str, stage: str, fraction: float) -> None:
         if job_id != self._active_job_id:
@@ -647,6 +744,41 @@ class MainWindow(QMainWindow):
         )
         if filename:
             self._perform_export(Path(filename), kind="midi")
+
+    def _choose_part_musicxml_destination(self) -> None:
+        self._choose_part_destination("musicxml")
+
+    def _choose_part_midi_destination(self) -> None:
+        self._choose_part_destination("midi")
+
+    def _choose_part_destination(self, kind: str) -> None:
+        part_id = self.editing_workspace.selected_part_id
+        if part_id is None:
+            return
+        suffix = "musicxml" if kind == "musicxml" else "mid"
+        file_filter = _tr("MusicXML (*.musicxml)") if kind == "musicxml" else _tr("MIDI (*.mid)")
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            _tr("导出当前分谱"),
+            f"TimbreScribe-Part.{suffix}",
+            file_filter,
+        )
+        if not filename:
+            return
+        try:
+            exported = (
+                self.export_part_musicxml(part_id, Path(filename))
+                if kind == "musicxml"
+                else self.export_part_midi(part_id, Path(filename))
+            )
+        except (TimbreScribeError, OSError, ValueError) as exc:
+            self._show_error(
+                _tr("分谱导出失败"),
+                str(exc),
+                _tr("请选择有效分谱和可写目录后重试。"),
+            )
+            return
+        self.statusBar().showMessage(_tr("已导出分谱：{path}").format(path=exported), 8_000)
 
     def _choose_visual_destination(self, kind: str) -> None:
         filters = {
@@ -866,6 +998,8 @@ class MainWindow(QMainWindow):
             self._editing_controller.shutdown()
         if self._basic_pitch_controller is not None:
             self._basic_pitch_controller.shutdown()
+        if self._muscriptor_controller is not None:
+            self._muscriptor_controller.shutdown()
         if self._media_controller is not None:
             self._media_controller.shutdown()
         self._worker.shutdown()

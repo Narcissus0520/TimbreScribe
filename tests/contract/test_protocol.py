@@ -71,3 +71,58 @@ def test_basic_pitch_command_requires_audio_and_ordered_frequency_range() -> Non
             minimum_frequency_hz=440.0,
             maximum_frequency_hz=220.0,
         )
+
+
+def test_muscriptor_command_round_trips_only_local_verified_model_facts() -> None:
+    command = StartCommand.muscriptor(
+        job_id="multi-contract",
+        result_dir=Path("job"),
+        audio_path=Path("decoded.wav"),
+        model_variant="small",
+        model_path=Path("models/small/model.safetensors"),
+        model_revision="8c127f603b807520fa465c838e9bfee8a91ada4e",
+        model_sha256="b" * 64,
+        device="cpu",
+        instrument_conditioning=("acoustic_piano", "drums"),
+        accepted_terms_version="terms-v1",
+        source_rights_confirmed=True,
+    )
+    serialized = serialize_message(command)
+    parsed = parse_app_command(serialized)
+
+    assert isinstance(parsed, StartCommand)
+    assert parsed.engine_id == "muscriptor"
+    assert parsed.model_path == Path("models/small/model.safetensors")
+    assert parsed.instrument_conditioning == ("acoustic_piano", "drums")
+    assert "token" not in serialized.lower()
+
+
+def test_muscriptor_command_requires_terms_rights_and_safetensors() -> None:
+    with pytest.raises(ValueError, match="safetensors"):
+        StartCommand.muscriptor(
+            job_id="bad-model",
+            result_dir=Path("job"),
+            audio_path=Path("decoded.wav"),
+            model_variant="small",
+            model_path=Path("model.pkl"),
+            model_revision="8" * 40,
+            model_sha256="b" * 64,
+            device="cpu",
+            instrument_conditioning=(),
+            accepted_terms_version="terms-v1",
+            source_rights_confirmed=True,
+        )
+    with pytest.raises(ValueError, match="rights"):
+        StartCommand.muscriptor(
+            job_id="bad-rights",
+            result_dir=Path("job"),
+            audio_path=Path("decoded.wav"),
+            model_variant="small",
+            model_path=Path("model.safetensors"),
+            model_revision="8" * 40,
+            model_sha256="b" * 64,
+            device="cpu",
+            instrument_conditioning=(),
+            accepted_terms_version="terms-v1",
+            source_rights_confirmed=False,
+        )
