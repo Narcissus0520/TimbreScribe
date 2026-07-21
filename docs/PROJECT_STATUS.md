@@ -2,9 +2,9 @@
 
 ## Current milestone
 
-Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, local artifact, and installed-lifecycle acceptance complete on `agent/phase-8-release-hardening`.
+Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, GitHub CI, clean-`main` artifact, and installed-lifecycle acceptance complete.
 
-Phases 5–7 have passed their acceptance gates and merged to `main`. Phase 8 is undergoing its final propagated branch quality and GitHub CI review. Final v1 still retains pristine no-Python Windows 10/11, manual Narrator/DPI, signing, and publication-authorization gates.
+Phases 5–8 have passed their implemented acceptance gates and merged to `main`. Final v1 still retains pristine no-Python Windows 10/11, manual Narrator/DPI, signing, and publication-authorization gates.
 
 ## Current application version
 
@@ -20,7 +20,7 @@ Phases 5–7 have passed their acceptance gates and merged to `main`. Phase 8 is
 - Phase 5 gated multi-part MuScriptor integration and real Small acceptance merged by PR #6 as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`.
 - Phase 6 deterministic notation refinement and synchronized playback merged by PR #7 as `64e2a609bc9d3d33bef568ff1b79857cfbb765c2`.
 - Phase 7 optional local/cloud score assistant merged by PR #8 as `2a4ce6c9eb1b00d2011ffe3b24778f5329bf71b4`.
-- Phase 8 is implemented on `agent/phase-8-release-hardening`; final branch quality, PR #9 CI, and merge remain.
+- Phase 8 Windows release hardening merged by PR #9 as `008743424c5c6c6fe9d39d1b979b14315e3f2892`.
 
 ## Completed in Phase 8
 
@@ -103,20 +103,19 @@ Phases 5–7 have passed their acceptance gates and merged to `main`. Phase 8 is
 | `ruff check .` | Passed |
 | `mypy src/timbrescribe` | Passed: 131 source files, strict mode |
 | `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 225 tests, 6 deselected, 77.15% branch-aware coverage |
-| Packaged artifact suite | Passed: 4 tests against frozen GUI/Workers, artifact-wide hashes/notices, one ONNX model |
-| Inno installed lifecycle | Passed: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
+| Clean-`main` packaged artifact suite | Passed from `0087434`: 4 tests against frozen GUI/Workers, 6,582 artifact-wide hashes, notices, and one ONNX model |
+| Clean-`main` Inno installed lifecycle | Passed: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
 | `benchmarks/score_pipeline.py --notes 1000 --runs 3` | Passed: 0.201 s median score-to-MusicXML, 0.299 s preview, 49.3 MiB peak working set |
 | `benchmarks/score_pipeline.py --notes 10000 --runs 3` | Passed: 2.100 s median score-to-MusicXML, 2.816 s preview, 114.2 MiB peak working set |
 | 10k `--compare` at `--max-regression-ratio 1.25` | Passed: every timing ratio 1.0046–1.0117; no regressed metrics |
 | `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked release environment |
 | `uv build --wheel` and content audit | Passed: `timbrescribe-0.9.0-py3-none-any.whl`, 141 files, no model/native executables; SHA-256 `3334ccc0afdf0878e797e2b80d07dc7711e546b835460e9a007b1c0cb797f1c3` |
-| Phase 8 release benchmark | GUI 1.374 s, Mock 0.513 s, Basic Pitch preload 2.134 s medians; onedir 1,065.105 MiB, installer 263.201 MiB |
+| Phase 8 release benchmark | GUI 1.374 s, Mock 0.513 s, Basic Pitch preload 2.134 s medians; clean-`main` rebuild: 1,063.973 MiB onedir, 430.273 MiB ZIP, 262.669 MiB installer |
 | Gated real MuScriptor Small test | Passed; final propagated CUDA rerun completed in 15.42 s. Recorded acceptance: exact revision/hash, `torch==2.13.0+cu126`, 3 labels, 3 score parts; aggregate evidence in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md` |
 
 ## In progress
 
-- Phase 8 final propagated branch quality, GitHub Actions, review, and PR #9 merge.
 - Final v1 operational acceptance remains pending pristine no-Python Windows 10/11 and manual Narrator/DPI release-candidate runs, plus explicit authorization for signing/publication.
 
 ## Known issues / blockers
@@ -131,7 +130,7 @@ Phases 5–7 have passed their acceptance gates and merged to `main`. Phase 8 is
 
 ## Next recommended task
 
-Validate and merge Phase 8 through PR #9, then rebuild from clean `main` and run the pristine Win10/11 and manual accessibility release-candidate matrix before any authorized signing or publication.
+Run the pristine no-Python Windows 10/11 and manual accessibility release-candidate matrix. Only after those gates pass, request explicit authorization for signing and publication.
 
 ## Last updated date
 

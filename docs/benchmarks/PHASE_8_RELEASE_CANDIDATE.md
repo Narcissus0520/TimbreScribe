@@ -8,10 +8,10 @@ three times per process path. GUI timing runs `--smoke-test`; Mock timing starts
 completes one deterministic polyphonic protocol-v1 job, and exits; Basic Pitch timing starts the
 packaged Worker, verifies/preloads ONNX Runtime plus the exact model, receives EOF, and exits.
 
-The run was made from the complete Phase 8 working tree on top of `de558bd`; the final release build
-must be repeated from the clean Phase 8 checkpoint, whose exact SHA is recorded by
-`release-manifest.json`. These timings are a hardware-specific engineering baseline, not a
-cross-machine guarantee.
+The selected timing run was made from the complete Phase 8 working tree on top of `de558bd`. A full
+rebuild was subsequently completed from clean `main` at Phase 8 merge commit `0087434`; its exact
+full SHA is recorded by the local `release-manifest.json`. These timings are a hardware-specific
+engineering baseline, not a cross-machine guarantee.
 
 ## Selected results
 
@@ -33,6 +33,20 @@ linked Qt/PySide/Verovio libraries, FFmpeg shared DLLs, and ONNX/scientific CPU 
 explicit. The Basic Pitch model directory contains exactly one 230,444-byte `nmp.onnx` with SHA-256
 `2c3c1d144bfa61ad236e92e169c13535c880469a12a047d4e73451f2c059a0ec`; TFLite,
 TensorFlow, CoreML, MuScriptor and GGUF weights are absent.
+
+## Clean-main reconstruction
+
+The post-merge reconstruction used the locked 147-package environment, Python 3.11.9,
+PyInstaller 6.21.0, Inno Setup 7.0.2, and the approved FFmpeg binaries. The onedir contains 6,582
+manifested files and occupies 1,063.973 MiB; its deterministic ZIP is 430.273 MiB and its unsigned
+installer is 262.669 MiB. The build took 581.7 s, installer compilation took 270.8 s, and the
+installed lifecycle took 83.8 s on the selected machine.
+
+All four packaged GUI/Mock/Basic Pitch/manifest tests passed. The installed lifecycle passed silent
+install, GUI smoke, association, clean in-place upgrade, settings/project preservation, silent
+uninstall, and association cleanup. The artifact scan found no Torch runtime directory,
+MuScriptor/GGUF weight, token, or source media. Candidate hashes remain in the ignored local
+manifests because signing and public hash publication are not authorized.
 
 ## Reproduction
 
