@@ -2,9 +2,9 @@
 
 ## Current milestone
 
-Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, local artifact, and installed-lifecycle acceptance complete on the stacked `agent/phase-8-release-hardening` branch.
+Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, local artifact, and installed-lifecycle acceptance complete on `agent/phase-8-release-hardening`.
 
-Phase 5 real MuScriptor Small acceptance remains pending because no user token, exact-terms acceptance, verified weights, or approved local multi-instrument audio is currently available. Phases 6–8 do not weaken or falsely satisfy that independent gate, and stacked branches must still merge in milestone order. Final v1 also retains pristine no-Python Windows 10/11, manual Narrator/DPI, signing, and publication-authorization gates.
+Phases 5–7 have passed their acceptance gates and merged to `main`. Phase 8 is undergoing its final propagated branch quality and GitHub CI review. Final v1 still retains pristine no-Python Windows 10/11, manual Narrator/DPI, signing, and publication-authorization gates.
 
 ## Current application version
 
@@ -17,10 +17,10 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 - Phase 2 Basic Pitch baseline merged by PR #3 as `f5f92547b9276e02513a8c5c52f09d94cfc3b750`.
 - Phase 3 reviewed notation and professional exports merged by PR #4 as `afc13fbccc51585de648600633b8c8fa629b4e4a`.
 - Phase 4 editing and persistence merged by PR #5 as `207d0945a98d127ae7e461d109d8ae5b78d39bde`.
-- Phase 5 is implemented on `agent/phase-5-multipart-muscriptor` but is intentionally not merged or presented as accepted until the real Small-model gate passes.
-- Phase 6 is implemented and pushed on `agent/phase-6-notation-playback`; it is stacked on Phase 5 and therefore cannot merge ahead of it.
-- Phase 7 is implemented on `agent/phase-7-assistant`; it is stacked on Phase 6 and must merge only after Phases 5 and 6.
-- Phase 8 is implemented on `agent/phase-8-release-hardening`; it is stacked on Phase 7 and must merge only after Phases 5–7.
+- Phase 5 gated multi-part MuScriptor integration and real Small acceptance merged by PR #6 as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`.
+- Phase 6 deterministic notation refinement and synchronized playback merged by PR #7 as `64e2a609bc9d3d33bef568ff1b79857cfbb765c2`.
+- Phase 7 optional local/cloud score assistant merged by PR #8 as `2a4ce6c9eb1b00d2011ffe3b24778f5329bf71b4`.
+- Phase 8 is implemented on `agent/phase-8-release-hardening`; final branch quality, PR #9 CI, and merge remain.
 
 ## Completed in Phase 8
 
@@ -50,11 +50,8 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 
 - Added the two-method `AssistantProvider` application port, an offline-capable loopback llama.cpp adapter for a user-selected GGUF, and a generic credential-free OpenAI-compatible HTTPS endpoint with user-selected model ID.
 - Added OS credential-service BYOK storage namespaced by endpoint. Non-secret provider settings are separate, atomic, and omit keys and cloud consent.
-- Added an explicit Qwen 4B-class GGUF guidance manifest without weights, automatic download, fixed source, or inferred license acceptance. Local child processes receive only a minimal runtime/GPU environment allowlist.
-- Added bounded data-minimized requests requiring selected stable note IDs or an explicit measure range. The UI shows exact project/request JSON; cloud sends require a fresh checkbox approval invalidated by any scope/configuration/project change.
-- Added strict schema-v1 response parsing with unknown-field/operation rejection, stable-note/part/range validation, no code/path operation, stale-revision rejection, and content-free metadata logging.
-- Added deterministic application mappings for transpose, tempo, meter, key, quantize, low-confidence deletion, instrument profile, rhythm simplification, piano-hand split, and explanation-only responses.
-- Added immutable command preview, deterministic diff, destructive labeling, explicit confirmation for every mutation, ordinary undo history, provider failure isolation, and off-GUI-thread provider calls.
+- Added explicit Qwen 4B-class GGUF guidance without bundled weights, automatic download, fixed source, or inferred license acceptance.
+- Added bounded data-minimized requests, exact request preview, fresh cloud approval, strict response validation, deterministic edit plans, explicit confirmation, undo, failure isolation, and off-GUI-thread provider calls.
 - Added model-free unit and Qt workflow coverage plus assistant privacy documentation and ADR 0017.
 
 ## Phase 7 acceptance matrix
@@ -70,16 +67,9 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 
 ## Completed in Phase 6
 
-- Added deterministic continuity-aware piano-hand assignment and per-staff non-overlap voice allocation. Staff and voice remain command-editable, so a user can override and undo every heuristic placement.
-- Added explicit rhythm simplification profiles, refined straight/triplet grids, persistent 3:2 triplet markers, and MusicXML `<time-modification>` output.
-- Added explicit General MIDI percussion mapping with unpitched score values, percussion clef/noteheads/instrument IDs, MusicXML `<unpitched>` and `midi-unpitched`, while MIDI retains sounding drum/channel semantics.
-- Added conservative exact-template chord suggestions labeled `suggested` with confidence, MusicXML `<harmony>`, persistence, manual add/edit/delete, refresh that preserves manual symbols, and command-stack undo/redo.
-- Added written/sounding instrument-range diagnostics that inspect the current score without clamping, transposing, deleting, or relocating notes; editing diagnostics are surfaced in the GUI.
-- Added exact tempo-map beat/second conversion and one transport position stream for waveform, raw piano roll, editable roll, compact score, and Verovio active-note highlighting. The compact score supports click-to-seek.
-- Added an application `PreviewSynthesizer` port, dependency-light deterministic 8 kHz PCM pulse adapter, coalescing Qt background client, per-request atomic artifacts, stale-result rejection, and dual source/preview Qt Multimedia playback.
-- Added cached stable score order/measure count and one-pass indexes for measure spans, voice/staff lookup, harmony measures, and preview pulse waveforms.
-- Added a reproducible 1k/10k score benchmark, selected hardware baseline, and a 1.25x same-machine regression gate that refuses cross-machine guarantees.
-- Updated MusicXML XSD coverage for pitched, transposing, percussion, harmony, and triplet fixtures; added ADR 0016 and Phase 6 architecture/testing/release documentation.
+- Added deterministic continuity-aware piano-hand assignment, per-staff non-overlap voice allocation, explicit rhythm profiles, persistent triplets, General MIDI percussion semantics, and conservative reviewable chord suggestions.
+- Added written/sounding range diagnostics, exact tempo-map beat/second conversion, synchronized waveform/piano-roll/score position, and dependency-light deterministic preview synthesis.
+- Added stable score indexes, reproducible 1k/10k benchmarks, W3C MusicXML coverage, ADR 0016, and related architecture/testing/release documentation.
 
 ## Phase 6 acceptance matrix
 
@@ -92,14 +82,14 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 | Range diagnostics do not mutate notes silently | Domain equality test and GUI out-of-range edit retain MIDI 127 while emitting `SOUNDING_RANGE` | Passed |
 | Long-score benchmark stays within documented threshold | Selected 10k baseline: 2.100 s score-to-MusicXML and 2.816 s preview; immediate comparison ratios 1.0046–1.0117, all below 1.25 | Passed |
 
-## Phase 5 gate retained
+## Phase 5 acceptance retained
 
 | Requirement | Current state |
 |---|---|
 | Application works without MuScriptor | Passed in the complete default suite |
 | No gated download without exact acceptance | Passed by installer process tests |
 | No token in logs/projects | Passed by protocol, persistence, diagnostic, repository, and wheel audits |
-| Small produces multiple parts on approved material | **Pending operator token, acceptance, verified weights, approved audio, and rights confirmation** |
+| Small produces multiple parts on approved material | Passed: exact Small produced 3 model labels and 3 internal score parts from an operator-approved local excerpt |
 | Unknown labels remain safe/editable | Passed |
 | Crash/OOM preserves project | Passed |
 | Experimental/non-commercial labeling | Passed |
@@ -112,7 +102,7 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 | `ruff format --check .` | Passed: 190 files formatted |
 | `ruff check .` | Passed |
 | `mypy src/timbrescribe` | Passed: 131 source files, strict mode |
-| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 223 tests, 6 deselected, 76.84% branch-aware coverage |
+| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 225 tests, 6 deselected, 77.15% branch-aware coverage |
 | Packaged artifact suite | Passed: 4 tests against frozen GUI/Workers, artifact-wide hashes/notices, one ONNX model |
 | Inno installed lifecycle | Passed: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
@@ -122,27 +112,26 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 | `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked release environment |
 | `uv build --wheel` and content audit | Passed: `timbrescribe-0.9.0-py3-none-any.whl`, 141 files, no model/native executables; SHA-256 `3334ccc0afdf0878e797e2b80d07dc7711e546b835460e9a007b1c0cb797f1c3` |
 | Phase 8 release benchmark | GUI 1.374 s, Mock 0.513 s, Basic Pitch preload 2.134 s medians; onedir 1,065.105 MiB, installer 263.201 MiB |
-| Gated real MuScriptor Small test | Not run by design; operator prerequisites remain absent |
+| Gated real MuScriptor Small test | Passed; final propagated CUDA rerun completed in 15.42 s. Recorded acceptance: exact revision/hash, `torch==2.13.0+cu126`, 3 labels, 3 score parts; aggregate evidence in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md` |
 
 ## In progress
 
-- Phase 8 implementation and local release-candidate acceptance are complete; no source implementation item remains in progress.
-- Phase 5 real Small-model acceptance remains intentionally paused until the user restores the required token and supplies the remaining operator prerequisites.
-- Final v1 operational acceptance remains pending pristine no-Python Windows 10/11 and manual Narrator/DPI RC runs, plus explicit authorization for signing/publication.
+- Phase 8 final propagated branch quality, GitHub Actions, review, and PR #9 merge.
+- Final v1 operational acceptance remains pending pristine no-Python Windows 10/11 and manual Narrator/DPI release-candidate runs, plus explicit authorization for signing/publication.
 
 ## Known issues / blockers
 
-- Phase 5 cannot be accepted or merged until the exact current Small model terms are explicitly accepted, a credential is stored, pinned weights verify, and the opt-in isolated test passes on approved local multi-instrument material with per-run rights confirmation.
-- Phases 6–8 are locally complete but stacked; none may merge to `main` before the Phase 5 gate and Phase 5 PR complete.
 - A pristine Windows 10 and Windows 11 x64 environment with no Python is not available in the current workspace; the exact installer matrix and GitHub workflow are implemented but cannot be represented as run on those two client VMs.
+- Manual Narrator and 100/150/200% display-scale acceptance remains pending.
 - Code signing and public release/hash publication have not been authorized; locally built candidates are explicitly unsigned and remain under `work/`.
 - MuseScore is not installed on this machine, so external release-MuseScore round-trip acceptance remains pending even though availability gating is tested.
 - The fallback preview is intentionally a timing-review pulse instrument, not production orchestration. A FluidSynth/SoundFont adapter remains optional pending explicit license and redistribution review.
 - Tempo, key, and chord analysis are reviewable suggestions rather than authoritative automatic analysis.
+- Medium MuScriptor remains experimental and has no separate real-model stability claim.
 
 ## Next recommended task
 
-Commit and push the Phase 8 checkpoint, rebuild once from that clean commit so provenance names the exact source, and keep it stacked without merging ahead of Phase 5. When the user restores the token and supplies the remaining operator prerequisites, run the real Small acceptance, create/merge Phases 5, 6, 7, and 8 in order, then execute the pristine Win10/11 and manual accessibility RC matrix before any authorized v1 signing/publication.
+Validate and merge Phase 8 through PR #9, then rebuild from clean `main` and run the pristine Win10/11 and manual accessibility release-candidate matrix before any authorized signing or publication.
 
 ## Last updated date
 

@@ -10,7 +10,7 @@ import os
 import sys
 import tempfile
 import threading
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from io import TextIOWrapper
@@ -330,7 +330,12 @@ def _write_artifact(
     return result_path
 
 
-def _run_job(command: StartCommand, cancel_event: threading.Event) -> None:
+def _run_job(
+    command: StartCommand,
+    cancel_event: threading.Event,
+    *,
+    runtime_ready: Callable[[], None] | None = None,
+) -> None:
     try:
         if command.engine_id != "muscriptor" or command.audio_path is None:
             raise TimbreScribeError(
@@ -347,6 +352,8 @@ def _run_job(command: StartCommand, cancel_event: threading.Event) -> None:
         _emit(ProgressMessage(job_id=command.job_id, stage="validate", fraction=0.05))
         source_sha256 = _sha256_file(audio_path)
         runtime = _get_runtime(command)
+        if runtime_ready is not None:
+            runtime_ready()
         if cancel_event.is_set():
             raise TimbreScribeError(ErrorCode.TRANSCRIPTION_CANCELLED, "Cancelled")
         _emit(ProgressMessage(job_id=command.job_id, stage="inference", fraction=0.2))
@@ -430,6 +437,18 @@ def _read_commands(commands: Queue[StartCommand | None], state: _WorkerState) ->
     commands.put(None)
 
 
+def _read_initial_start(lines: Iterable[str]) -> StartCommand | None:
+    for line in lines:
+        try:
+            command = parse_app_command(line)
+        except TimbreScribeError:
+            LOGGER.exception("Ignoring invalid MuScriptor protocol command")
+            continue
+        if isinstance(command, StartCommand):
+            return command
+    return None
+
+
 def _validate_config(path: Path, variant: str) -> None:
     try:
         validate_muscriptor_config(path, variant)
@@ -476,27 +495,44 @@ def main() -> int:
             ),
         )
     )
+    initial_command = _read_initial_start(sys.stdin)
+    if initial_command is None:
+        return 0
+
     commands: Queue[StartCommand | None] = Queue()
     state = _WorkerState()
-    reader = threading.Thread(
-        target=_read_commands,
-        args=(commands, state),
-        daemon=True,
-        name="muscriptor-command-reader",
-    )
-    reader.start()
+    reader: threading.Thread | None = None
+
+    def start_reader() -> None:
+        nonlocal reader
+        if reader is not None:
+            return
+        reader = threading.Thread(
+            target=_read_commands,
+            args=(commands, state),
+            daemon=True,
+            name="muscriptor-command-reader",
+        )
+        reader.start()
+
+    command: StartCommand | None = initial_command
     while True:
-        command = commands.get()
         if command is None:
             break
         cancel_event = threading.Event()
         with state.lock:
             state.active_job_id = command.job_id
             state.cancel_event = cancel_event
-        _run_job(command, cancel_event)
+        _run_job(
+            command,
+            cancel_event,
+            runtime_ready=start_reader if reader is None else None,
+        )
+        start_reader()
         with state.lock:
             state.active_job_id = None
             state.cancel_event = None
+        command = commands.get()
     return 0
 
 
