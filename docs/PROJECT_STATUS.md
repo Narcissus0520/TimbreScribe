@@ -4,7 +4,7 @@
 
 Phase 7 — Optional Local/Cloud Score Assistant (`v0.8.0`), implementation and model-free acceptance complete on the stacked `agent/phase-7-assistant` branch.
 
-Phase 5 real MuScriptor Small acceptance remains pending because no user token, exact-terms acceptance, verified weights, or approved local multi-instrument audio is currently available. Phases 6 and 7 do not weaken or falsely satisfy that independent gate, and stacked branches must still merge in milestone order.
+Phase 5 real MuScriptor Small acceptance passed and PR #6 merged as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`. Phase 6 merged through PR #7 as `64e2a609bc9d3d33bef568ff1b79857cfbb765c2`. Phase 7 must complete updated branch CI/review before milestone-order merge.
 
 ## Current application version
 
@@ -17,9 +17,9 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 - Phase 2 Basic Pitch baseline merged by PR #3 as `f5f92547b9276e02513a8c5c52f09d94cfc3b750`.
 - Phase 3 reviewed notation and professional exports merged by PR #4 as `afc13fbccc51585de648600633b8c8fa629b4e4a`.
 - Phase 4 editing and persistence merged by PR #5 as `207d0945a98d127ae7e461d109d8ae5b78d39bde`.
-- Phase 5 is implemented on `agent/phase-5-multipart-muscriptor` but is intentionally not merged or presented as accepted until the real Small-model gate passes.
-- Phase 6 is implemented and pushed on `agent/phase-6-notation-playback`; it is stacked on Phase 5 and therefore cannot merge ahead of it.
-- Phase 7 is implemented on `agent/phase-7-assistant`; it is stacked on Phase 6 and must merge only after Phases 5 and 6.
+- Phase 5 gated multi-part MuScriptor integration and real Small acceptance merged by PR #6 as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`.
+- Phase 6 deterministic notation refinement and synchronized playback merged by PR #7 as `64e2a609bc9d3d33bef568ff1b79857cfbb765c2`.
+- Phase 7 is stacked on the accepted Phase 6 branch and is not yet merged.
 
 ## Completed in Phase 7
 
@@ -67,14 +67,14 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 | Range diagnostics do not mutate notes silently | Domain equality test and GUI out-of-range edit retain MIDI 127 while emitting `SOUNDING_RANGE` | Passed |
 | Long-score benchmark stays within documented threshold | Selected 10k baseline: 2.100 s score-to-MusicXML and 2.816 s preview; immediate comparison ratios 1.0046–1.0117, all below 1.25 | Passed |
 
-## Phase 5 gate retained
+## Phase 5 acceptance retained
 
 | Requirement | Current state |
 |---|---|
 | Application works without MuScriptor | Passed in the complete default suite |
 | No gated download without exact acceptance | Passed by installer process tests |
 | No token in logs/projects | Passed by protocol, persistence, diagnostic, repository, and wheel audits |
-| Small produces multiple parts on approved material | **Pending operator token, acceptance, verified weights, approved audio, and rights confirmation** |
+| Small produces multiple parts on approved material | Passed: exact Small produced 3 model labels and 3 internal score parts from an operator-approved local excerpt |
 | Unknown labels remain safe/editable | Passed |
 | Crash/OOM preserves project | Passed |
 | Experimental/non-commercial labeling | Passed |
@@ -87,32 +87,31 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 | `ruff format --check .` | Passed: 178 files formatted |
 | `ruff check .` | Passed |
 | `mypy src/timbrescribe` | Passed: 126 source files, strict mode |
-| `pytest` with verified FFmpeg | Passed: 213 tests, 2 opt-in model tests skipped, 76.70% branch-aware coverage |
+| `pytest -m "not model and not packaging"` | Passed: 214 tests, 2 opt-in model tests deselected, 77.07% branch-aware coverage |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
 | `benchmarks/score_pipeline.py --notes 1000 --runs 3` | Passed: 0.201 s median score-to-MusicXML, 0.299 s preview, 49.3 MiB peak working set |
 | `benchmarks/score_pipeline.py --notes 10000 --runs 3` | Passed: 2.100 s median score-to-MusicXML, 2.816 s preview, 114.2 MiB peak working set |
 | 10k `--compare` at `--max-regression-ratio 1.25` | Passed: every timing ratio 1.0046–1.0117; no regressed metrics |
 | `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked default environment |
 | `uv build --wheel` and content audit | Passed: `timbrescribe-0.8.0-py3-none-any.whl`, 136 files, assistant manifest present, no weights/ONNX/native executables; SHA-256 `71678c380372e3c98eedc8c8d00621fdcf2f142e5f03eb3d0e243f09c1628289` |
-| Gated real MuScriptor Small test | Not run by design; operator prerequisites remain absent |
+| Gated real MuScriptor Small test | Passed in 20.70 s: exact revision/hash, `torch==2.13.0+cu126`, 3 labels, 3 score parts; aggregate evidence in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md` |
 
 ## In progress
 
-- Phase 7 implementation and model-free acceptance are complete; no Phase 7 implementation item remains in progress.
-- Phase 5 real Small-model acceptance remains intentionally paused until the user restores the required token and supplies the remaining operator prerequisites.
-- Phase 8 release hardening will begin on a new stacked branch after the Phase 7 checkpoint is pushed.
+- Phase 7 implementation and model-free acceptance are complete; updated branch quality/CI and PR #8 merge remain.
+- Phase 8 release hardening is implemented on its stacked branch and must not merge before Phase 7.
 
 ## Known issues / blockers
 
-- Phase 5 cannot be accepted or merged until the exact current Small model terms are explicitly accepted, a credential is stored, pinned weights verify, and the opt-in isolated test passes on approved local multi-instrument material with per-run rights confirmation.
-- Phases 6 and 7 are locally complete but stacked; neither may merge to `main` before the Phase 5 gate and Phase 5 PR complete.
+- Phase 7 must complete updated branch quality/CI and PR #8 merge before Phase 8 can merge.
 - MuseScore is not installed on this machine, so external release-MuseScore round-trip acceptance remains pending even though availability gating is tested.
 - The fallback preview is intentionally a timing-review pulse instrument, not production orchestration. A FluidSynth/SoundFont adapter remains optional pending explicit license and redistribution review.
 - Tempo, key, and chord analysis are reviewable suggestions rather than authoritative automatic analysis.
+- Medium MuScriptor remains experimental and has no separate real-model stability claim.
 
 ## Next recommended task
 
-Commit and push Phase 7 without merging it ahead of the gated stack, then begin Phase 8 packaging/release engineering on a new stacked branch. When the user later restores the token and supplies the remaining operator prerequisites, return to the preserved Phase 5 gate, run the real Small acceptance, and merge Phases 5, 6, 7, and 8 in order.
+Run the complete Phase 7 quality gates, push the accepted stack update to PR #8, complete Windows CI/review, and merge Phase 7 before propagating into Phase 8.
 
 ## Last updated date
 

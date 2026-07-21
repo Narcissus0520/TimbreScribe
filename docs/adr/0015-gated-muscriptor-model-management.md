@@ -15,6 +15,8 @@ Installation requires all of the following before network access: an explicit in
 
 Inference runs in its own persistent process and receives only the verified local safetensors path and recorded settings through protocol v1. The worker independently checks the file and configuration before lazily importing MuScriptor/Torch. Crash, cancellation, and out-of-memory results never promote a partial score. Small is the first supported choice; the UI keeps Medium disabled until the exact Small installation verifies. CPU is an explicit fallback rather than a silent substitution.
 
+The optional setup keeps CPU as its default. An operator may explicitly select the Windows x64 CUDA 12.6 runtime; that path replaces only the managed environment's Torch build with the exact official PyTorch 2.13.0 CUDA wheel and its recorded SHA-256 URL fragment. CUDA availability and a real device tensor are verified before inference. A later ordinary `uv sync` may restore the locked CPU build, so CUDA selection remains an explicit local runtime step rather than an unrecorded lock-file fork.
+
 Every run requires a separate source-media-rights confirmation. Engine instrument labels create stable parts through a conservative editable mapping; unknown labels use a generic profile while their original evidence remains unchanged.
 
 ## Alternatives

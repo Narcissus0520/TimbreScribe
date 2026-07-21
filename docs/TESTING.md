@@ -39,8 +39,16 @@ The JSON records hardware, Python/engine/runtime/model identity, model hash, inp
 The default suite does not install MuScriptor/Torch, use credentials, download weights, or accept third-party terms. Installing the pinned MIT engine code is a separate explicit step and does not download or accept model weights:
 
 ```powershell
+# CPU is the default and remains the portable fallback.
 ./tools/setup_muscriptor.ps1
+
+# Optional Windows x64 CUDA 12.6 runtime after a successful GPU preflight.
+# This downloads the exact official PyTorch 2.13.0+cu126 wheel (about 2.42 GiB)
+# and verifies its pinned SHA-256 URL fragment plus a real CUDA tensor.
+./tools/setup_muscriptor.ps1 -TorchRuntime cuda126
 ```
+
+The CUDA override is local to `.venv`; an ordinary `uv sync` can restore the locked CPU Torch build, so rerun the explicit CUDA setup before a CUDA model gate. `-VerifyOnly -TorchRuntime cuda126` checks an existing CUDA environment without downloading or changing it.
 
 Then use the in-app **MuScriptor (Experimental / Non-Commercial)** panel to review and explicitly accept the exact Small revision, save a Hugging Face token in the operating-system credential store, and install the hash-verified model. Do not automate or infer that legal acceptance. Run the real-model gate only with local material for which the operator has confirmed all necessary rights:
 

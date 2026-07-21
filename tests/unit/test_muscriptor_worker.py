@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import sys
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
+from io import StringIO
 from pathlib import Path
 
 import pytest
@@ -10,7 +13,7 @@ import pytest
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
 from timbrescribe.infrastructure.muscriptor import JsonModelAcceptanceStore, load_muscriptor_catalog
 from timbrescribe.infrastructure.workers.artifact_loader import load_transcription_artifact
-from timbrescribe.shared.protocol import ProgressMessage, StartCommand
+from timbrescribe.shared.protocol import ProgressMessage, StartCommand, serialize_message
 from timbrescribe.workers import muscriptor as worker
 from timbrescribe.workers import muscriptor_installer as installer
 
@@ -127,6 +130,50 @@ def test_worker_rejects_wrong_config_and_classifies_oom(tmp_path: Path) -> None:
         worker._validate_config(config, "small")
     assert raised.value.code is ErrorCode.MODEL_INCOMPATIBLE
     assert worker._is_out_of_memory(RuntimeError("CUDA out of memory"))
+
+
+def test_worker_loads_first_runtime_before_starting_command_reader(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    command = _command(tmp_path)
+    events: list[str] = []
+
+    class ImmediateThread:
+        def __init__(
+            self,
+            *,
+            target: Callable[..., None],
+            args: tuple[object, ...],
+            daemon: bool,
+            name: str,
+        ) -> None:
+            assert daemon
+            assert name == "muscriptor-command-reader"
+            self._target = target
+            self._args = args
+
+        def start(self) -> None:
+            events.append("reader-started")
+            self._target(*self._args)
+
+    def run_job(
+        _command: StartCommand,
+        _cancel_event: threading.Event,
+        *,
+        runtime_ready: Callable[[], None],
+    ) -> None:
+        events.append("runtime-load-started")
+        runtime_ready()
+        events.append("runtime-loaded")
+
+    monkeypatch.setattr(sys, "stdin", StringIO(f"{serialize_message(command)}\n"))
+    monkeypatch.setattr(worker.threading, "Thread", ImmediateThread)
+    monkeypatch.setattr(worker, "_emit", lambda _message: None)
+    monkeypatch.setattr(worker, "_run_job", run_job)
+
+    assert worker.main() == 0
+    assert events == ["runtime-load-started", "reader-started", "runtime-loaded"]
 
 
 def test_installer_refuses_network_before_current_terms_acceptance(
