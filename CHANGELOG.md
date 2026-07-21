@@ -56,6 +56,7 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Fixed
 
+- Replaced the compressed left-dock `M…`/`B…` labels with readable top-aligned workspace tabs, full hover descriptions, and a width regression gate.
 - Replaced per-measure full-score scans with one-pass span indexes and cached score order/count, reducing the measured 10,000-note notation path from 22.240 seconds to 1.305 seconds on the selected Phase 6 baseline machine.
 - Preserved cancellation semantics when Qt reports a forced worker termination as a process error.
 - Forced UTF-8 on Mock worker standard streams so JSONL paths remain valid on Windows systems using non-UTF-8 console code pages.

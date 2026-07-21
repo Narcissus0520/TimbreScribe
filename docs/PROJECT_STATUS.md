@@ -30,7 +30,7 @@ Phases 5–8 have passed their implemented acceptance gates and merged to `main`
 - Added pinned Inno Setup 7.0.2 per-user installer with optional shortcuts, HKCU `.timbrescribe` association, in-place upgrade preservation, uninstall association cleanup, and explicit managed model/cache/log cleanup prompt that never targets projects/settings/recovery/credentials.
 - Added packaged GUI, Mock protocol/artifact, Basic Pitch preload, model allowlist, notice, and manifest tests; added installed GUI/association/upgrade/uninstall preservation automation and a manual pristine Windows matrix.
 - Added bounded redacted crash records/diagnostic ZIPs, scoped cache/log cleanup, high-DPI initialization, persistent light/dark themes, visible keyboard focus, semantic accessible names, and About tabs for version/licenses/inventory/model/privacy.
-- Fixed first-launch dock collapse with explicit initial proportions, scrollable MuScriptor/notation forms, and keyboard/menu-reachable actions for every dock; the regression is covered by a live-widget GUI test.
+- Fixed first-launch dock collapse and compressed workspace labels with explicit initial proportions, readable top-aligned tabs, full hover descriptions, scrollable MuScriptor/notation forms, and keyboard/menu-reachable actions; live-widget GUI tests cover the regressions.
 - Added user guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADR 0018.
 
 ## Phase 8 acceptance matrix
@@ -102,7 +102,7 @@ Phases 5–8 have passed their implemented acceptance gates and merged to `main`
 | `ruff format --check .` | Passed: 190 files formatted |
 | `ruff check .` | Passed |
 | `mypy src/timbrescribe` | Passed: 131 source files, strict mode |
-| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 225 tests, 6 deselected, 77.15% branch-aware coverage |
+| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 225 tests, 6 deselected, 77.22% branch-aware coverage |
 | Clean-`main` packaged artifact suite | Passed from `0087434`: 4 tests against frozen GUI/Workers, 6,582 artifact-wide hashes, notices, and one ONNX model |
 | Clean-`main` Inno installed lifecycle | Passed: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |

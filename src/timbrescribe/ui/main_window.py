@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QProgressBar,
+    QTabBar,
     QTabWidget,
     QToolBar,
     QWidget,
@@ -391,7 +392,12 @@ class MainWindow(QMainWindow):
         self.addToolBar(toolbar)
 
     def _build_docks(self) -> None:
-        media_dock = QDockWidget(_tr("源媒体"), self)
+        self.setTabPosition(
+            Qt.DockWidgetArea.LeftDockWidgetArea,
+            QTabWidget.TabPosition.North,
+        )
+
+        media_dock = QDockWidget(_tr("媒体"), self)
         media_dock.setObjectName("sourceMediaDock")
         media_dock.setWidget(self.media_workspace)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, media_dock)
@@ -401,25 +407,25 @@ class MainWindow(QMainWindow):
         source_layout.addRow(_tr("引擎"), self.engine_label)
         source_layout.addRow(_tr("音符场景"), self.scenario_combo)
         source_layout.addRow(_tr("运行结果"), self.simulation_combo)
-        source_dock = QDockWidget(_tr("Mock 转录"), self)
+        source_dock = QDockWidget(_tr("Mock"), self)
         source_dock.setObjectName("mockTranscriptionDock")
         source_dock.setWidget(source_widget)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, source_dock)
         self.tabifyDockWidget(media_dock, source_dock)
 
-        basic_pitch_dock = QDockWidget(_tr("Basic Pitch CPU"), self)
+        basic_pitch_dock = QDockWidget(_tr("Basic"), self)
         basic_pitch_dock.setObjectName("basicPitchDock")
         basic_pitch_dock.setWidget(self.basic_pitch_workspace)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, basic_pitch_dock)
         self.tabifyDockWidget(media_dock, basic_pitch_dock)
 
-        muscriptor_dock = QDockWidget(_tr("MuScriptor（实验/非商业）"), self)
+        muscriptor_dock = QDockWidget(_tr("MuScriptor"), self)
         muscriptor_dock.setObjectName("muscriptorDock")
         muscriptor_dock.setWidget(self.muscriptor_workspace)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, muscriptor_dock)
         self.tabifyDockWidget(media_dock, muscriptor_dock)
 
-        notation_dock = QDockWidget(_tr("乐谱整理"), self)
+        notation_dock = QDockWidget(_tr("乐谱"), self)
         notation_dock.setObjectName("notationReviewDock")
         notation_dock.setWidget(self.notation_workspace)
         self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, notation_dock)
@@ -435,6 +441,20 @@ class MainWindow(QMainWindow):
         diagnostics_dock.setObjectName("diagnosticsDock")
         diagnostics_dock.setWidget(self.diagnostics)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, diagnostics_dock)
+
+        workspace_descriptions = {
+            _tr("媒体"): _tr("源媒体：导入、解码与播放"),
+            _tr("Mock"): _tr("Mock：确定性离线测试转录"),
+            _tr("Basic"): _tr("Basic Pitch：CPU 单轨转录"),
+            _tr("MuScriptor"): _tr("MuScriptor：实验性多声部转录（非商业）"),
+            _tr("乐谱"): _tr("乐谱整理：量化、乐器与排版"),
+        }
+        for dock in (media_dock, source_dock, basic_pitch_dock, muscriptor_dock, notation_dock):
+            description = workspace_descriptions[dock.windowTitle()]
+            dock.setMinimumWidth(400)
+            dock.setToolTip(description)
+            dock.setAccessibleName(description)
+        self._workspace_tab_bar = self._configure_workspace_tab_bar(workspace_descriptions)
 
         # QMainWindow otherwise lets the central score views consume the complete
         # initial geometry.  In that state every dock is reduced to a title-bar
@@ -461,6 +481,25 @@ class MainWindow(QMainWindow):
             "diagnostics": diagnostics_dock,
         }
         media_dock.raise_()
+
+    def _configure_workspace_tab_bar(
+        self,
+        descriptions: dict[str, str],
+    ) -> QTabBar | None:
+        expected_titles = set(descriptions)
+        for tab_bar in self.findChildren(QTabBar):
+            tab_titles = {tab_bar.tabText(index) for index in range(tab_bar.count())}
+            if tab_titles != expected_titles:
+                continue
+            tab_bar.setObjectName("workspaceDockTabBar")
+            tab_bar.setAccessibleName(_tr("转录与乐谱工作区"))
+            tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
+            tab_bar.setExpanding(False)
+            tab_bar.setUsesScrollButtons(True)
+            for index in range(tab_bar.count()):
+                tab_bar.setTabToolTip(index, descriptions[tab_bar.tabText(index)])
+            return tab_bar
+        return None
 
     @staticmethod
     def _activate_dock(dock: QDockWidget) -> None:
