@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from timbrescribe.domain.notation.models import (
@@ -32,13 +32,22 @@ def quantize_transcription(
 ) -> tuple[tuple[QuantizedNoteEvent, ...], tuple[NotationDiagnostic, ...]]:
     """Return a stable quantized view without mutating raw evidence."""
 
+    effective = effective_quantization_settings(settings)
     diagnostics: list[NotationDiagnostic] = []
+    if effective != settings:
+        diagnostics.append(
+            NotationDiagnostic(
+                "info",
+                "RHYTHM_SIMPLIFICATION_APPLIED",
+                f"Applied the {settings.rhythm_simplification} rhythm profile",
+            )
+        )
     selected: list[_PhysicalEvent] = []
     for note in raw.notes:
         if (
-            settings.remove_below_confidence is not None
+            effective.remove_below_confidence is not None
             and note.confidence is not None
-            and note.confidence < settings.remove_below_confidence
+            and note.confidence < effective.remove_below_confidence
         ):
             diagnostics.append(
                 NotationDiagnostic(
@@ -50,16 +59,16 @@ def quantize_transcription(
             continue
         selected.append(_physical(note))
     selected.sort(key=lambda item: (item.onset_seconds, item.pitch, item.id))
-    if settings.merge_repeated_notes:
-        selected = _merge_repeated(selected, tempo_bpm, settings.onset_tolerance)
+    if effective.merge_repeated_notes:
+        selected = _merge_repeated(selected, tempo_bpm, effective.onset_tolerance)
 
     result: list[QuantizedNoteEvent] = []
     for event in selected:
         start = _seconds_to_beats(event.onset_seconds, tempo_bpm)
         end = _seconds_to_beats(event.offset_seconds, tempo_bpm)
-        quantized_start = _nearest_grid(start, settings)
-        quantized_end = _nearest_grid(end, settings)
-        if abs(quantized_start - start) > settings.onset_tolerance:
+        quantized_start, _start_triplet = nearest_grid(start, effective)
+        quantized_end, _end_triplet = nearest_grid(end, effective)
+        if abs(quantized_start - start) > effective.onset_tolerance:
             diagnostics.append(
                 NotationDiagnostic(
                     "warning",
@@ -69,12 +78,12 @@ def quantize_transcription(
             )
         raw_duration = end - start
         duration = quantized_end - quantized_start
-        minimum = settings.minimum_duration
-        if raw_duration < minimum and settings.preserve_grace_like_short_notes:
-            minimum = min(minimum, settings.grid_resolution / 2)
+        minimum = effective.minimum_duration
+        if raw_duration < minimum and effective.preserve_grace_like_short_notes:
+            minimum = min(minimum, effective.grid_resolution / 2)
         if duration < minimum:
             duration = minimum
-        if abs(duration - raw_duration) > settings.duration_tolerance:
+        if abs(duration - raw_duration) > effective.duration_tolerance:
             diagnostics.append(
                 NotationDiagnostic(
                     "warning",
@@ -91,6 +100,7 @@ def quantize_transcription(
                 duration_beats=duration,
                 velocity=event.velocity,
                 confidence=event.confidence,
+                tuplet_ratio=(3, 2) if is_triplet_duration(duration, effective) else None,
             )
         )
     return tuple(result), tuple(diagnostics)
@@ -147,11 +157,53 @@ def _seconds_to_beats(seconds: Fraction, tempo_bpm: int) -> Fraction:
     return seconds * Fraction(tempo_bpm, 60)
 
 
-def _nearest_grid(value: Fraction, settings: QuantizationSettings) -> Fraction:
-    candidates = [_round_to_step(value, settings.grid_resolution)]
+def effective_quantization_settings(settings: QuantizationSettings) -> QuantizationSettings:
+    """Resolve a named readability profile to explicit deterministic settings."""
+
+    if settings.rhythm_simplification == "faithful":
+        return replace(
+            settings,
+            minimum_duration=min(settings.minimum_duration, settings.grid_resolution / 2),
+            preserve_grace_like_short_notes=True,
+        )
+    if settings.rhythm_simplification == "simple":
+        return replace(
+            settings,
+            grid_resolution=max(settings.grid_resolution, Fraction(1, 2)),
+            swing_handling="straight",
+            allow_triplets=False,
+            minimum_duration=max(settings.minimum_duration, Fraction(1, 2)),
+            merge_repeated_notes=True,
+            preserve_grace_like_short_notes=False,
+        )
+    return settings
+
+
+def nearest_grid(
+    value: Fraction,
+    settings: QuantizationSettings,
+) -> tuple[Fraction, bool]:
+    """Return the nearest supported grid point and whether a triplet grid won."""
+
+    candidates = [(_round_to_step(value, settings.grid_resolution), False)]
     if settings.allow_triplets or settings.swing_handling == "preserve":
-        candidates.append(_round_to_step(value, settings.grid_resolution * Fraction(2, 3)))
-    return min(candidates, key=lambda candidate: (abs(candidate - value), candidate))
+        candidates.append((_round_to_step(value, settings.grid_resolution * Fraction(2, 3)), True))
+    return min(
+        candidates,
+        key=lambda candidate: (abs(candidate[0] - value), candidate[1], candidate[0]),
+    )
+
+
+def is_triplet_duration(duration: Fraction, settings: QuantizationSettings) -> bool:
+    """Identify durations represented by the 3:2 grid rather than the straight grid."""
+
+    if not (settings.allow_triplets or settings.swing_handling == "preserve"):
+        return False
+    straight_units = duration / settings.grid_resolution
+    if straight_units.denominator == 1:
+        return False
+    triplet_units = duration / (settings.grid_resolution * Fraction(2, 3))
+    return triplet_units.denominator == 1
 
 
 def _round_to_step(value: Fraction, step: Fraction) -> Fraction:

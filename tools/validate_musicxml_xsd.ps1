@@ -42,10 +42,15 @@ New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 $env:TIMBRESCRIBE_XSD_FIXTURES = $fixtureRoot
 @'
 import os
+from fractions import Fraction
 from pathlib import Path
 
 from tests.factories import make_raw_transcription
-from timbrescribe.domain.notation import NotationSettings, build_notation
+from timbrescribe.domain.notation import (
+    NotationSettings,
+    QuantizationSettings,
+    build_notation,
+)
 from timbrescribe.infrastructure.exporting import MusicXmlExporter
 
 output = Path(os.environ["TIMBRESCRIBE_XSD_FIXTURES"])
@@ -58,6 +63,35 @@ for profile_id in ("piano", "clarinet-bb", "alto-sax-eb", "horn-f"):
         NotationSettings(instrument_profile_id=profile_id),
     ).score
     MusicXmlExporter().export(score, output / f"{profile_id}.musicxml")
+drum_score = build_notation(
+    make_raw_transcription(
+        note_specs=((36, 0.0, 0.5), (38, 0.5, 1.0), (42, 1.0, 1.5))
+    ),
+    NotationSettings(instrument_profile_id="drums"),
+).score
+MusicXmlExporter().export(drum_score, output / "drums.musicxml")
+
+harmony_score = build_notation(
+    make_raw_transcription(
+        note_specs=((60, 0.0, 1.0), (64, 0.0, 1.0), (67, 0.0, 1.0))
+    ),
+    NotationSettings(),
+).score
+MusicXmlExporter().export(harmony_score, output / "harmony.musicxml")
+
+triplet_score = build_notation(
+    make_raw_transcription(note_specs=((60, 0.0, 1 / 6),)),
+    NotationSettings(
+        tempo_bpm=120,
+        quantization=QuantizationSettings(
+            grid_resolution=Fraction(1, 4),
+            allow_triplets=True,
+            minimum_duration=Fraction(1, 8),
+            merge_repeated_notes=False,
+        ),
+    ),
+).score
+MusicXmlExporter().export(triplet_score, output / "triplet.musicxml")
 '@ | uv run python -
 if ($LASTEXITCODE -ne 0) {
     throw "Could not generate MusicXML XSD fixtures"
@@ -98,4 +132,4 @@ if ($script:validationFailures.Count) {
     throw ($script:validationFailures -join "`n")
 }
 
-Write-Output "W3C MusicXML 4.0 XSD validation passed for piano, B-flat, E-flat, and F fixtures"
+Write-Output "W3C MusicXML 4.0 XSD validation passed for pitched, transposing, percussion, harmony, and triplet fixtures"

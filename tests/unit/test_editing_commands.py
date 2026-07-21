@@ -11,11 +11,14 @@ from timbrescribe.application import (
     AddNoteCommand,
     AssignNotesCommand,
     ChangePartInstrumentCommand,
+    DeleteChordSymbolCommand,
     DeleteNotesCommand,
     EditingSession,
     MoveNotesCommand,
+    RefreshChordSuggestionsCommand,
     RequantizeCommand,
     ResizeNotesCommand,
+    SetChordSymbolCommand,
 )
 from timbrescribe.domain.notation import NotationSettings, QuantizationSettings, build_notation
 from timbrescribe.domain.project import (
@@ -23,6 +26,7 @@ from timbrescribe.domain.project import (
     compare_raw_and_edited,
     create_editing_project,
 )
+from timbrescribe.domain.score import ChordSymbol
 
 
 def _project() -> object:
@@ -151,3 +155,55 @@ def test_raw_vs_edited_comparison_preserves_immutable_evidence() -> None:
 def test_quantization_settings_reject_invalid_values() -> None:
     with pytest.raises(ValueError):
         QuantizationSettings(grid_resolution=Fraction(0))
+
+
+def test_chord_symbols_are_explicit_manual_undoable_edits() -> None:
+    session = EditingSession(_project(), saved=True)  # type: ignore[arg-type]
+    symbol = ChordSymbol(
+        id="manual-chord-1",
+        part_id="part-1",
+        position_beat=Fraction(0),
+        root_step="C",
+        root_alter=0,
+        kind="major",
+        text="Cmaj",
+        source="suggested",
+        confidence=0.5,
+    )
+
+    changed = session.execute(SetChordSymbolCommand(symbol))
+    assert changed.score.chord_symbols[0].source == "manual"
+    assert changed.score.chord_symbols[0].confidence is None
+    assert changed.score.chord_symbols[0].text == "Cmaj"
+    assert session.undo().score.chord_symbols == ()
+    assert session.redo().score.chord_symbols[0].text == "Cmaj"
+
+    session.execute(DeleteChordSymbolCommand(symbol.id))
+    assert session.project.score.chord_symbols == ()
+    assert session.undo().score.chord_symbols[0].text == "Cmaj"
+
+
+def test_refresh_chord_suggestions_preserves_manual_symbols() -> None:
+    raw = make_raw_transcription(
+        note_specs=(
+            (60, 0.0, 0.5),
+            (64, 0.0, 0.5),
+            (67, 0.0, 0.5),
+            (62, 0.5, 1.0),
+            (65, 0.5, 1.0),
+            (69, 0.5, 1.0),
+        )
+    )
+    settings = NotationSettings()
+    project = create_editing_project(raw, build_notation(raw, settings).score, settings)
+    session = EditingSession(project)
+    first, second = session.project.score.chord_symbols
+    session.execute(SetChordSymbolCommand(replace(first, text="C major")))
+    session.execute(DeleteChordSymbolCommand(second.id))
+
+    refreshed = session.execute(RefreshChordSuggestionsCommand())
+
+    assert refreshed.score.chord_symbols[0] == replace(
+        first, text="C major", source="manual", confidence=None
+    )
+    assert refreshed.score.chord_symbols[1] == second

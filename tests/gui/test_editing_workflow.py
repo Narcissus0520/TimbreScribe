@@ -94,6 +94,44 @@ def test_inspector_part_staff_voice_edit_and_raw_comparison(
     assert not controller.dirty
 
 
+def test_manual_chord_edit_delete_and_undo(
+    main_window: MainWindow,
+    qtbot: QtBot,
+) -> None:
+    _run_success(main_window, qtbot)
+    controller = main_window.editing_controller
+    assert controller is not None and controller.session is not None
+    workspace = main_window.editing_workspace
+    assert "suggestions" in workspace.chord_notice.text()
+
+    workspace.chord_position.setValue(0.0)
+    workspace.chord_root.setCurrentIndex(0)
+    workspace.chord_kind.setCurrentIndex(workspace.chord_kind.findData("major"))
+    workspace.chord_text.setText("Cmaj")
+    workspace.chord_apply_button.click()
+
+    symbols = controller.session.project.score.chord_symbols
+    assert len(symbols) == 1
+    chord_id = symbols[0].id
+    assert (symbols[0].text, symbols[0].source) == ("Cmaj", "manual")
+
+    workspace.chord_select.setCurrentIndex(workspace.chord_select.findData(chord_id))
+    workspace.chord_text.setText("C")
+    workspace.chord_apply_button.click()
+    assert controller.session.project.score.chord_symbols[0].text == "C"
+    main_window.undo_action.trigger()
+    assert controller.session.project.score.chord_symbols[0].text == "Cmaj"
+
+    workspace.chord_select.setCurrentIndex(workspace.chord_select.findData(chord_id))
+    workspace.chord_delete_button.click()
+    assert controller.session.project.score.chord_symbols == ()
+    main_window.undo_action.trigger()
+    assert controller.session.project.score.chord_symbols[0].id == chord_id
+    main_window.undo_action.trigger()
+    assert controller.session.project.score.chord_symbols == ()
+    assert not controller.dirty
+
+
 def test_save_reopen_preserves_ids_and_edits(
     main_window: MainWindow,
     qtbot: QtBot,

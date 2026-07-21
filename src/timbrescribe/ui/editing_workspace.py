@@ -13,7 +13,9 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QSplitter,
     QVBoxLayout,
@@ -364,6 +366,9 @@ class EditingWorkspace(QWidget):
     loop_requested = Signal(bool, object, object)
     part_view_changed = Signal(object)
     part_profile_requested = Signal(str, str)
+    chord_set_requested = Signal(str, str, object, str, int, str, str)
+    chord_delete_requested = Signal(str)
+    chord_refresh_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -433,6 +438,48 @@ class EditingWorkspace(QWidget):
         self.confidence = QLabel("—", inspector)
         self.apply_button = QPushButton(self.tr("Apply inspector edit"), inspector)
         self.apply_button.setEnabled(False)
+        self.chord_notice = QLabel(
+            self.tr("Chord symbols are suggestions until explicitly reviewed or edited."),
+            inspector,
+        )
+        self.chord_notice.setWordWrap(True)
+        self.chord_select = QComboBox(inspector)
+        self.chord_position = QDoubleSpinBox(inspector)
+        self.chord_position.setRange(0, 100_000)
+        self.chord_position.setDecimals(4)
+        self.chord_root = QComboBox(inspector)
+        for label, root_value in (
+            ("C", ("C", 0)),
+            ("C♯", ("C", 1)),
+            ("D♭", ("D", -1)),
+            ("D", ("D", 0)),
+            ("E♭", ("E", -1)),
+            ("E", ("E", 0)),
+            ("F", ("F", 0)),
+            ("F♯", ("F", 1)),
+            ("G♭", ("G", -1)),
+            ("G", ("G", 0)),
+            ("A♭", ("A", -1)),
+            ("A", ("A", 0)),
+            ("B♭", ("B", -1)),
+            ("B", ("B", 0)),
+        ):
+            self.chord_root.addItem(label, root_value)
+        self.chord_kind = QComboBox(inspector)
+        for label, kind_value in (
+            (self.tr("Major"), "major"),
+            (self.tr("Minor"), "minor"),
+            (self.tr("Dominant"), "dominant"),
+            (self.tr("Diminished"), "diminished"),
+            (self.tr("Augmented"), "augmented"),
+            (self.tr("Other"), "other"),
+        ):
+            self.chord_kind.addItem(label, kind_value)
+        self.chord_text = QLineEdit(inspector)
+        self.chord_apply_button = QPushButton(self.tr("Add / apply manual chord"), inspector)
+        self.chord_delete_button = QPushButton(self.tr("Delete selected chord"), inspector)
+        self.chord_refresh_button = QPushButton(self.tr("Refresh chord suggestions"), inspector)
+        self.chord_delete_button.setEnabled(False)
         inspector_layout.addRow(self.selection_label)
         inspector_layout.addRow(self.tr("Raw source IDs"), self.source_label)
         inspector_layout.addRow(self.tr("Sounding MIDI"), self.pitch)
@@ -446,10 +493,23 @@ class EditingWorkspace(QWidget):
         inspector_layout.addRow(self.tr("Velocity"), self.velocity)
         inspector_layout.addRow(self.tr("Raw confidence"), self.confidence)
         inspector_layout.addRow(self.apply_button)
+        inspector_layout.addRow(self.chord_notice)
+        inspector_layout.addRow(self.tr("Chord symbol"), self.chord_select)
+        inspector_layout.addRow(self.tr("Chord beat"), self.chord_position)
+        inspector_layout.addRow(self.tr("Chord root"), self.chord_root)
+        inspector_layout.addRow(self.tr("Chord kind"), self.chord_kind)
+        inspector_layout.addRow(self.tr("Chord text"), self.chord_text)
+        inspector_layout.addRow(self.chord_apply_button)
+        inspector_layout.addRow(self.chord_delete_button)
+        inspector_layout.addRow(self.chord_refresh_button)
 
         splitter = QSplitter(Qt.Orientation.Horizontal, self)
         splitter.addWidget(self.roll)
-        splitter.addWidget(inspector)
+        inspector_scroll = QScrollArea(self)
+        inspector_scroll.setWidgetResizable(True)
+        inspector_scroll.setWidget(inspector)
+        inspector_scroll.setMinimumWidth(260)
+        splitter.addWidget(inspector_scroll)
         splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 1)
         layout = QVBoxLayout(self)
@@ -494,6 +554,24 @@ class EditingWorkspace(QWidget):
         selected_index = self.part_view.findData(selected_view)
         self.part_view.setCurrentIndex(max(0, selected_index))
         self.part_view.blockSignals(False)
+        selected_chord = self.chord_select.currentData()
+        self.chord_select.blockSignals(True)
+        self.chord_select.clear()
+        self.chord_select.addItem(self.tr("New manual chord"), None)
+        for symbol in project.score.chord_symbols:
+            source = self.tr("suggestion") if symbol.source == "suggested" else self.tr("manual")
+            self.chord_select.addItem(
+                self.tr("{beat:.2f}: {text} [{source}]").format(
+                    beat=float(symbol.position_beat),
+                    text=symbol.text,
+                    source=source,
+                ),
+                symbol.id,
+            )
+        chord_index = self.chord_select.findData(selected_chord)
+        self.chord_select.setCurrentIndex(max(0, chord_index))
+        self.chord_select.blockSignals(False)
+        self._chord_selection_changed(self.chord_select.currentIndex())
         self.roll.set_part_filter(self.selected_part_id)
         self._select_part_profile(self.selected_part_id)
         comparison = compare_raw_and_edited(project)
@@ -527,6 +605,10 @@ class EditingWorkspace(QWidget):
         self.roll.selection_changed.connect(self._selection_changed)
         self.apply_button.clicked.connect(self._apply_properties)
         self.apply_profile_button.clicked.connect(self._apply_profile)
+        self.chord_select.currentIndexChanged.connect(self._chord_selection_changed)
+        self.chord_apply_button.clicked.connect(self._apply_chord)
+        self.chord_delete_button.clicked.connect(self._delete_chord)
+        self.chord_refresh_button.clicked.connect(self.chord_refresh_requested)
         self.play_button.clicked.connect(self.play_requested)
         self.pause_button.clicked.connect(self.pause_requested)
         self.stop_button.clicked.connect(self.stop_requested)
@@ -613,6 +695,64 @@ class EditingWorkspace(QWidget):
         profile_id = self.instrument_profile.currentData()
         if isinstance(part_id, str) and isinstance(profile_id, str):
             self.part_profile_requested.emit(part_id, profile_id)
+
+    def _chord_selection_changed(self, _index: int) -> None:
+        chord_id = self.chord_select.currentData()
+        symbol = (
+            next(
+                (item for item in self._project.score.chord_symbols if item.id == chord_id),
+                None,
+            )
+            if self._project is not None and isinstance(chord_id, str)
+            else None
+        )
+        self.chord_delete_button.setEnabled(symbol is not None)
+        if symbol is None:
+            self.chord_text.clear()
+            return
+        self.chord_position.setValue(float(symbol.position_beat))
+        root_index = next(
+            (
+                index
+                for index in range(self.chord_root.count())
+                if self.chord_root.itemData(index) == (symbol.root_step, symbol.root_alter)
+            ),
+            0,
+        )
+        self.chord_root.setCurrentIndex(root_index)
+        self.chord_kind.setCurrentIndex(self.chord_kind.findData(symbol.kind))
+        self.chord_text.setText(symbol.text)
+
+    def _apply_chord(self) -> None:
+        if self._project is None:
+            return
+        part_id = self.selected_part_id or self._project.score.parts[0].id
+        root = self.chord_root.currentData()
+        kind = self.chord_kind.currentData()
+        text = self.chord_text.text().strip()
+        chord_id = self.chord_select.currentData()
+        if (
+            isinstance(root, tuple)
+            and len(root) == 2
+            and isinstance(root[0], str)
+            and isinstance(root[1], int)
+            and isinstance(kind, str)
+            and text
+        ):
+            self.chord_set_requested.emit(
+                chord_id if isinstance(chord_id, str) else "",
+                part_id,
+                Fraction(str(self.chord_position.value())).limit_denominator(960),
+                root[0],
+                root[1],
+                kind,
+                text,
+            )
+
+    def _delete_chord(self) -> None:
+        chord_id = self.chord_select.currentData()
+        if isinstance(chord_id, str):
+            self.chord_delete_requested.emit(chord_id)
 
     def _select_part_profile(self, part_id: str | None) -> None:
         if self._project is None or part_id is None:

@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import replace
 from fractions import Fraction
 
+from timbrescribe.domain.notation.harmony import suggest_chord_symbols
 from timbrescribe.domain.notation.instruments import get_instrument_profile
 from timbrescribe.domain.notation.measures import construct_measures
 from timbrescribe.domain.notation.models import (
     NotationDiagnostic,
     NotationDraft,
     NotationSettings,
-    QuantizedNoteEvent,
 )
+from timbrescribe.domain.notation.percussion import map_percussion_note
 from timbrescribe.domain.notation.quantization import quantize_transcription
+from timbrescribe.domain.notation.refinement import AllocatedNoteEvent, allocate_voices
 from timbrescribe.domain.score import (
     InstrumentProfile,
     KeyEvent,
@@ -60,13 +61,6 @@ _FLAT_SPELLINGS: tuple[tuple[str, int], ...] = (
 )
 
 
-@dataclass(frozen=True, slots=True)
-class _AllocatedEvent:
-    event: QuantizedNoteEvent
-    staff: int
-    voice: int
-
-
 def build_notation(
     raw: RawTranscription,
     settings: NotationSettings,
@@ -82,7 +76,7 @@ def build_notation(
         profile=profile,
         part_id="part-1",
         part_name=profile.display_name,
-        midi_channel=0,
+        midi_channel=9 if profile.percussion else 0,
         midi_program=profile.midi_program,
     )
     score = ScoreDocument(
@@ -101,6 +95,17 @@ def build_notation(
         ),
         key_map=KeyMap((KeyEvent(Fraction(0), settings.key_fifths, settings.key_mode),)),
     )
+    suggestions = suggest_chord_symbols(score)
+    score = replace(score, chord_symbols=suggestions)
+    if suggestions:
+        diagnostics = (
+            *diagnostics,
+            NotationDiagnostic(
+                "info",
+                "CHORD_SYMBOL_SUGGESTIONS",
+                f"Generated {len(suggestions)} chord suggestions; review or edit them manually",
+            ),
+        )
     return NotationDraft(score, construct_measures(score), diagnostics)
 
 
@@ -121,7 +126,7 @@ def build_notation_part(
         tempo_bpm=settings.tempo_bpm,
         settings=settings.quantization,
     )
-    allocated = _allocate_voices(quantized, profile.staff_count)
+    allocated = allocate_voices(quantized, profile)
     notes, notation_diagnostics = _score_notes(
         allocated,
         profile=profile,
@@ -142,6 +147,16 @@ def build_notation_part(
         concert_pitch_view=settings.concert_pitch_view,
     )
     diagnostics = (*quantization_diagnostics, *notation_diagnostics)
+    if profile.staff_count == 2:
+        diagnostics = (
+            *diagnostics,
+            NotationDiagnostic(
+                "info",
+                "PIANO_HAND_SPLIT_HEURISTIC",
+                "Grand-staff placement uses continuity and hand-range heuristics; "
+                "review and override Staff in the note inspector when needed",
+            ),
+        )
     if not notes:
         diagnostics = (
             *diagnostics,
@@ -154,53 +169,8 @@ def build_notation_part(
     return part, tuple(diagnostics)
 
 
-def _allocate_voices(
-    events: tuple[QuantizedNoteEvent, ...],
-    staff_count: int,
-) -> tuple[_AllocatedEvent, ...]:
-    grouped: dict[tuple[Fraction, Fraction, int], list[QuantizedNoteEvent]] = defaultdict(list)
-    for event in events:
-        staff = _staff_for(event.sounding_pitch, staff_count)
-        grouped[(event.start_beat, event.duration_beats, staff)].append(event)
-
-    voice_ends: list[Fraction] = []
-    result: list[_AllocatedEvent] = []
-    for (start, duration, staff), chord in sorted(grouped.items()):
-        voice = next(
-            (index for index, end in enumerate(voice_ends, start=1) if end <= start),
-            len(voice_ends) + 1,
-        )
-        if voice > len(voice_ends):
-            voice_ends.append(start + duration)
-        else:
-            voice_ends[voice - 1] = start + duration
-        result.extend(
-            _AllocatedEvent(event, staff, voice)
-            for event in sorted(chord, key=lambda item: (item.sounding_pitch, item.id))
-        )
-    return tuple(
-        sorted(
-            result,
-            key=lambda item: (
-                item.event.start_beat,
-                item.voice,
-                item.staff,
-                item.event.sounding_pitch,
-                item.event.id,
-            ),
-        )
-    )
-
-
-def _staff_for(pitch: int, staff_count: int) -> int:
-    if staff_count == 1:
-        return 1
-    # A narrow hysteresis band keeps notes around middle C on the treble staff.
-    return 2 if pitch < 59 else 1
-
-
 def _score_notes(
-    allocated: tuple[_AllocatedEvent, ...],
+    allocated: tuple[AllocatedNoteEvent, ...],
     *,
     profile: InstrumentProfile,
     part_id: str,
@@ -211,6 +181,24 @@ def _score_notes(
     diagnostics: list[NotationDiagnostic] = []
     for allocated_event in allocated:
         event = allocated_event.event
+        if profile.percussion:
+            notes.append(
+                ScoreNote(
+                    id=f"score-{event.id}",
+                    source_note_ids=event.source_note_ids,
+                    part_id=part_id,
+                    staff=allocated_event.staff,
+                    voice=allocated_event.voice,
+                    written_pitch=None,
+                    sounding_pitch=event.sounding_pitch,
+                    start_beat=event.start_beat,
+                    duration_beats=event.duration_beats,
+                    velocity=event.velocity,
+                    notations=("triplet",) if event.tuplet_ratio is not None else (),
+                    percussion=map_percussion_note(event.sounding_pitch),
+                )
+            )
+            continue
         try:
             written_midi = (
                 event.sounding_pitch
@@ -255,6 +243,7 @@ def _score_notes(
                 start_beat=event.start_beat,
                 duration_beats=event.duration_beats,
                 velocity=event.velocity,
+                notations=("triplet",) if event.tuplet_ratio is not None else (),
             )
         )
     return tuple(notes), tuple(diagnostics)

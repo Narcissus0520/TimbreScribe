@@ -11,12 +11,14 @@ from typing import Any, cast
 from timbrescribe.domain.notation import NotationSettings, QuantizationSettings
 from timbrescribe.domain.project import EditedNoteEvent, EditingProject, ProjectMediaReference
 from timbrescribe.domain.score import (
+    ChordSymbol,
     InstrumentProfile,
     KeyEvent,
     KeyMap,
     MeterEvent,
     MeterMap,
     Part,
+    PercussionNotation,
     PitchRange,
     PitchSpelling,
     ScoreDocument,
@@ -303,6 +305,13 @@ def decode_notation_settings(value: JsonObject) -> NotationSettings:
         quantization=QuantizationSettings(
             grid_resolution=_fraction(quantization.get("grid_resolution"), "grid resolution"),
             swing_handling=cast(Any, _string(quantization.get("swing_handling"), "swing handling")),
+            rhythm_simplification=cast(
+                Any,
+                _string(
+                    quantization.get("rhythm_simplification", "balanced"),
+                    "rhythm simplification",
+                ),
+            ),
             allow_triplets=_boolean(quantization.get("allow_triplets"), "triplets"),
             minimum_duration=_fraction(quantization.get("minimum_duration"), "minimum duration"),
             onset_tolerance=_fraction(quantization.get("onset_tolerance"), "onset tolerance"),
@@ -335,6 +344,7 @@ def encode_score(score: ScoreDocument) -> JsonObject:
         "tempo_map": _encode_map(score.tempo_map),
         "meter_map": _encode_map(score.meter_map),
         "key_map": _encode_map(score.key_map),
+        "chord_symbols": [_encode_chord_symbol(symbol) for symbol in score.chord_symbols],
         "parts": [_encode_part(part) for part in score.parts],
     }
 
@@ -355,6 +365,31 @@ def decode_score(value: JsonObject) -> ScoreDocument:
         tempo_map=_decode_tempo_map(value.get("tempo_map")),
         meter_map=_decode_meter_map(value.get("meter_map")),
         key_map=_decode_key_map(value.get("key_map")),
+        chord_symbols=tuple(
+            _decode_chord_symbol(_object(item, "chord symbol"))
+            for item in _list(value.get("chord_symbols", []), "chord symbols")
+        ),
+    )
+
+
+def _encode_chord_symbol(symbol: ChordSymbol) -> JsonObject:
+    return {
+        **asdict(symbol),
+        "position_beat": _fraction_text(symbol.position_beat),
+    }
+
+
+def _decode_chord_symbol(value: JsonObject) -> ChordSymbol:
+    return ChordSymbol(
+        id=_string(value.get("id"), "chord ID"),
+        part_id=_string(value.get("part_id"), "chord part ID"),
+        position_beat=_fraction(value.get("position_beat"), "chord position"),
+        root_step=_string(value.get("root_step"), "chord root step"),
+        root_alter=_integer(value.get("root_alter"), "chord root alteration"),
+        kind=cast(Any, _string(value.get("kind"), "chord kind")),
+        text=_string(value.get("text"), "chord text"),
+        source=cast(Any, _string(value.get("source"), "chord source")),
+        confidence=_optional_number(value.get("confidence"), "chord confidence"),
     )
 
 
@@ -410,7 +445,8 @@ def _encode_score_note(note: ScoreNote) -> JsonObject:
         "part_id": note.part_id,
         "staff": note.staff,
         "voice": note.voice,
-        "written_pitch": asdict(note.written_pitch),
+        "written_pitch": asdict(note.written_pitch) if note.written_pitch is not None else None,
+        "percussion": asdict(note.percussion) if note.percussion is not None else None,
         "sounding_pitch": note.sounding_pitch,
         "start_beat": _fraction_text(note.start_beat),
         "duration_beats": _fraction_text(note.duration_beats),
@@ -423,7 +459,14 @@ def _encode_score_note(note: ScoreNote) -> JsonObject:
 
 
 def _decode_score_note(value: JsonObject) -> ScoreNote:
-    pitch = _object(value.get("written_pitch"), "written pitch")
+    pitch_value = value.get("written_pitch")
+    pitch = _object(pitch_value, "written pitch") if pitch_value is not None else None
+    percussion_value = value.get("percussion")
+    percussion = (
+        _decode_percussion(_object(percussion_value, "percussion notation"))
+        if percussion_value is not None
+        else None
+    )
     return ScoreNote(
         id=_string(value.get("id"), "score note ID"),
         source_note_ids=tuple(
@@ -433,10 +476,14 @@ def _decode_score_note(value: JsonObject) -> ScoreNote:
         part_id=_string(value.get("part_id"), "part ID"),
         staff=_integer(value.get("staff"), "staff"),
         voice=_integer(value.get("voice"), "voice"),
-        written_pitch=PitchSpelling(
-            step=_string(pitch.get("step"), "pitch step"),
-            octave=_integer(pitch.get("octave"), "pitch octave"),
-            alter=_integer(pitch.get("alter"), "pitch alteration"),
+        written_pitch=(
+            PitchSpelling(
+                step=_string(pitch.get("step"), "pitch step"),
+                octave=_integer(pitch.get("octave"), "pitch octave"),
+                alter=_integer(pitch.get("alter"), "pitch alteration"),
+            )
+            if pitch is not None
+            else None
         ),
         sounding_pitch=_integer(value.get("sounding_pitch"), "sounding pitch"),
         start_beat=_fraction(value.get("start_beat"), "start beat"),
@@ -449,6 +496,17 @@ def _decode_score_note(value: JsonObject) -> ScoreNote:
             _string(item, "notation", allow_empty=True)
             for item in _list(value.get("notations"), "notations")
         ),
+        percussion=percussion,
+    )
+
+
+def _decode_percussion(value: JsonObject) -> PercussionNotation:
+    return PercussionNotation(
+        midi_unpitched=_integer(value.get("midi_unpitched"), "unpitched MIDI"),
+        instrument_name=_string(value.get("instrument_name"), "percussion instrument"),
+        display_step=_string(value.get("display_step"), "percussion display step"),
+        display_octave=_integer(value.get("display_octave"), "percussion display octave"),
+        notehead=cast(Any, _string(value.get("notehead"), "percussion notehead")),
     )
 
 

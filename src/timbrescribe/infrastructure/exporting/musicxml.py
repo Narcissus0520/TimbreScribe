@@ -11,7 +11,7 @@ from xml.etree import ElementTree as ET
 
 from timbrescribe import __version__
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
-from timbrescribe.domain.score import Part, ScoreDocument, ScoreNote
+from timbrescribe.domain.score import ChordSymbol, Part, ScoreDocument, ScoreNote
 from timbrescribe.infrastructure.exporting.atomic import atomic_destination
 
 
@@ -42,17 +42,56 @@ class MusicXmlExporter:
         for index, part in enumerate(score.parts, start=1):
             score_part = ET.SubElement(part_list, "score-part", {"id": part.id})
             ET.SubElement(score_part, "part-name").text = part.name
-            score_instrument = ET.SubElement(
-                score_part,
-                "score-instrument",
-                {"id": f"{part.id}-I1"},
+            percussion = tuple(
+                sorted(
+                    {
+                        note.percussion.midi_unpitched: note.percussion
+                        for note in part.notes
+                        if note.percussion is not None
+                    }.values(),
+                    key=lambda item: item.midi_unpitched,
+                )
             )
-            ET.SubElement(score_instrument, "instrument-name").text = part.instrument_name
-            midi_instrument = ET.SubElement(score_part, "midi-instrument", {"id": f"{part.id}-I1"})
-            ET.SubElement(midi_instrument, "midi-channel").text = str(part.midi_channel + 1)
-            ET.SubElement(midi_instrument, "midi-program").text = str(part.midi_program + 1)
-            if index == 1:
-                ET.SubElement(midi_instrument, "volume").text = "80"
+            if percussion:
+                for mapping in percussion:
+                    instrument_id = _percussion_instrument_id(part.id, mapping.midi_unpitched)
+                    score_instrument = ET.SubElement(
+                        score_part,
+                        "score-instrument",
+                        {"id": instrument_id},
+                    )
+                    ET.SubElement(
+                        score_instrument, "instrument-name"
+                    ).text = mapping.instrument_name
+                for mapping_index, mapping in enumerate(percussion):
+                    instrument_id = _percussion_instrument_id(part.id, mapping.midi_unpitched)
+                    midi_instrument = ET.SubElement(
+                        score_part,
+                        "midi-instrument",
+                        {"id": instrument_id},
+                    )
+                    ET.SubElement(midi_instrument, "midi-channel").text = str(part.midi_channel + 1)
+                    ET.SubElement(midi_instrument, "midi-unpitched").text = str(
+                        mapping.midi_unpitched + 1
+                    )
+                    if index == 1 and mapping_index == 0:
+                        ET.SubElement(midi_instrument, "volume").text = "80"
+            else:
+                score_instrument = ET.SubElement(
+                    score_part,
+                    "score-instrument",
+                    {"id": f"{part.id}-I1"},
+                )
+                ET.SubElement(score_instrument, "instrument-name").text = part.instrument_name
+                midi_instrument = ET.SubElement(
+                    score_part,
+                    "midi-instrument",
+                    {"id": f"{part.id}-I1"},
+                )
+                ET.SubElement(midi_instrument, "midi-channel").text = str(part.midi_channel + 1)
+                ET.SubElement(midi_instrument, "midi-program").text = str(part.midi_program + 1)
+                if index == 1:
+                    ET.SubElement(midi_instrument, "volume").text = "80"
 
         for part in score.parts:
             part_element = ET.SubElement(root, "part", {"id": part.id})
@@ -75,6 +114,19 @@ class MusicXmlExporter:
                 if measure_index == 0:
                     self._write_attributes(measure, score, part, divisions)
                     self._write_tempo(measure, score.tempo_bpm)
+                self._write_harmonies(
+                    measure,
+                    tuple(
+                        symbol
+                        for symbol in score.chord_symbols
+                        if symbol.part_id == part.id
+                        and int(symbol.position_beat // score.measure_duration_beats)
+                        == measure_index
+                    ),
+                    measure_index,
+                    score.measure_duration_beats,
+                    divisions,
+                )
                 self._write_measure(
                     measure,
                     by_measure.get(measure_index, []),
@@ -187,6 +239,27 @@ class MusicXmlExporter:
         ET.SubElement(metronome, "per-minute").text = str(tempo_bpm)
         ET.SubElement(direction, "sound", {"tempo": str(tempo_bpm)})
 
+    def _write_harmonies(
+        self,
+        measure: ET.Element,
+        symbols: tuple[ChordSymbol, ...],
+        measure_index: int,
+        measure_duration: Fraction,
+        divisions: int,
+    ) -> None:
+        for value in symbols:
+            harmony = ET.SubElement(measure, "harmony", {"placement": "above"})
+            root = ET.SubElement(harmony, "root")
+            ET.SubElement(root, "root-step").text = value.root_step
+            if value.root_alter:
+                ET.SubElement(root, "root-alter").text = str(value.root_alter)
+            ET.SubElement(harmony, "kind", {"text": value.text}).text = value.kind
+            offset = value.position_beat - (measure_index * measure_duration)
+            ET.SubElement(harmony, "offset", {"sound": "yes"}).text = str(
+                self._ticks_allow_zero(offset, divisions)
+            )
+            ET.SubElement(harmony, "staff").text = "1"
+
     def _write_measure(
         self,
         measure: ET.Element,
@@ -284,20 +357,45 @@ class MusicXmlExporter:
         element = ET.SubElement(measure, "note", {"id": xml_id})
         if chord:
             ET.SubElement(element, "chord")
-        pitch = ET.SubElement(element, "pitch")
-        ET.SubElement(pitch, "step").text = segment.note.written_pitch.step
-        if segment.note.written_pitch.alter:
-            ET.SubElement(pitch, "alter").text = str(segment.note.written_pitch.alter)
-        ET.SubElement(pitch, "octave").text = str(segment.note.written_pitch.octave)
+        percussion = segment.note.percussion
+        if percussion is not None:
+            unpitched = ET.SubElement(element, "unpitched")
+            ET.SubElement(unpitched, "display-step").text = percussion.display_step
+            ET.SubElement(unpitched, "display-octave").text = str(percussion.display_octave)
+        else:
+            written_pitch = segment.note.written_pitch
+            if written_pitch is None:
+                raise TimbreScribeError(
+                    ErrorCode.MUSICXML_INVALID,
+                    f"Note {segment.note.id} has neither pitched nor unpitched notation",
+                )
+            pitch = ET.SubElement(element, "pitch")
+            ET.SubElement(pitch, "step").text = written_pitch.step
+            if written_pitch.alter:
+                ET.SubElement(pitch, "alter").text = str(written_pitch.alter)
+            ET.SubElement(pitch, "octave").text = str(written_pitch.octave)
         ET.SubElement(element, "duration").text = str(self._ticks(segment.duration, divisions))
         for tie_type, enabled in (("stop", segment.tie_stop), ("start", segment.tie_start)):
             if enabled:
                 ET.SubElement(element, "tie", {"type": tie_type})
-        ET.SubElement(element, "instrument", {"id": f"{segment.note.part_id}-I1"})
+        instrument_id = (
+            _percussion_instrument_id(segment.note.part_id, percussion.midi_unpitched)
+            if percussion is not None
+            else f"{segment.note.part_id}-I1"
+        )
+        ET.SubElement(element, "instrument", {"id": instrument_id})
         ET.SubElement(element, "voice").text = str(segment.note.voice)
-        note_type = self._note_type(segment.duration)
+        is_triplet = "triplet" in segment.note.notations
+        written_duration = segment.duration * Fraction(3, 2) if is_triplet else segment.duration
+        note_type = self._note_type(written_duration)
         if note_type is not None:
             ET.SubElement(element, "type").text = note_type
+        if is_triplet:
+            time_modification = ET.SubElement(element, "time-modification")
+            ET.SubElement(time_modification, "actual-notes").text = "3"
+            ET.SubElement(time_modification, "normal-notes").text = "2"
+        if percussion is not None:
+            ET.SubElement(element, "notehead").text = percussion.notehead
         ET.SubElement(element, "staff").text = str(segment.note.staff)
         ties = [
             tie_type
@@ -339,6 +437,17 @@ class MusicXmlExporter:
         return value.numerator
 
     @staticmethod
+    def _ticks_allow_zero(duration: Fraction, divisions: int) -> int:
+        value = duration * divisions
+        if value.denominator != 1 or value < 0:
+            raise TimbreScribeError(
+                ErrorCode.MUSICXML_INVALID,
+                f"Harmony offset {duration} cannot be represented with divisions={divisions}",
+                "Use a supported quantization grid.",
+            )
+        return value.numerator
+
+    @staticmethod
     def _note_type(duration: Fraction) -> str | None:
         return {
             Fraction(4): "whole",
@@ -356,7 +465,12 @@ def _clef_values(clef: str) -> tuple[str, str]:
         "bass": ("F", "4"),
         "alto": ("C", "3"),
         "tenor": ("C", "4"),
+        "percussion": ("percussion", "2"),
     }.get(clef, ("G", "2"))
+
+
+def _percussion_instrument_id(part_id: str, midi_unpitched: int) -> str:
+    return f"{part_id}-P{midi_unpitched}"
 
 
 def validate_musicxml(document: str) -> None:

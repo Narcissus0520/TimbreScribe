@@ -416,7 +416,7 @@ _PROFILES = (
         "percussion",
         0,
         True,
-        "treble",
+        "percussion",
         1,
         PitchRange(0, 127),
         PitchRange(0, 127),
