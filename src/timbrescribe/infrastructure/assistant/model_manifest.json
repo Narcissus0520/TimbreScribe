@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "id": "qwen-4b-class-instruct-gguf",
+      "display_name": "Qwen 4B-class Instruct GGUF (user supplied)",
+      "model_family": "Qwen instruct",
+      "parameter_class": "4B",
+      "format": "GGUF",
+      "source": "User-selected local file; TimbreScribe does not download or redistribute weights",
+      "license_review_required": true,
+      "bundled": false,
+      "default_context_size": 4096,
+      "minimum_ram_mb": 8192
+    }
+  ]
+}

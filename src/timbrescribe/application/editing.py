@@ -274,6 +274,87 @@ class RequantizeCommand:
 
 
 @dataclass(frozen=True, slots=True)
+class SetTempoCommand:
+    tempo_bpm: int
+    description: str = "Set score tempo"
+
+    def __post_init__(self) -> None:
+        if not 20 <= self.tempo_bpm <= 400:
+            raise ValueError("Tempo must be in [20, 400] BPM")
+
+    @property
+    def affected_entity_ids(self) -> tuple[str, ...]:
+        return ()
+
+    def apply(self, project: EditingProject) -> EditingProject:
+        if project.notation_settings.tempo_bpm == self.tempo_bpm:
+            raise ValueError("Score already uses the requested tempo")
+        settings = replace(
+            project.notation_settings,
+            tempo_bpm=self.tempo_bpm,
+            tempo_source="manual",
+        )
+        return _replace_content(project, settings=settings)
+
+
+@dataclass(frozen=True, slots=True)
+class SetMeterCommand:
+    beats: int
+    beat_unit: int
+    description: str = "Set score meter"
+
+    def __post_init__(self) -> None:
+        if self.beats < 1 or self.beat_unit not in {1, 2, 4, 8, 16}:
+            raise ValueError("Invalid score meter")
+
+    @property
+    def affected_entity_ids(self) -> tuple[str, ...]:
+        return ()
+
+    def apply(self, project: EditingProject) -> EditingProject:
+        current = project.notation_settings
+        if (current.meter_beats, current.meter_beat_unit) == (self.beats, self.beat_unit):
+            raise ValueError("Score already uses the requested meter")
+        return _replace_content(
+            project,
+            settings=replace(
+                current,
+                meter_beats=self.beats,
+                meter_beat_unit=self.beat_unit,
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SetKeySignatureCommand:
+    fifths: int
+    mode: str
+    description: str = "Set score key signature"
+
+    def __post_init__(self) -> None:
+        if not -7 <= self.fifths <= 7 or self.mode not in {"major", "minor"}:
+            raise ValueError("Invalid key signature")
+
+    @property
+    def affected_entity_ids(self) -> tuple[str, ...]:
+        return ()
+
+    def apply(self, project: EditingProject) -> EditingProject:
+        current = project.notation_settings
+        if (current.key_fifths, current.key_mode) == (self.fifths, self.mode):
+            raise ValueError("Score already uses the requested key")
+        return _replace_content(
+            project,
+            settings=replace(
+                current,
+                key_fifths=self.fifths,
+                key_mode=self.mode,  # type: ignore[arg-type]
+                key_source="manual",
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class SetChordSymbolCommand:
     symbol: ChordSymbol
     description: str = "Set chord symbol"

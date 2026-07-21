@@ -7,6 +7,7 @@ from pathlib import Path
 
 from timbrescribe.application import JobManager, NotationService, PhaseZeroService, ProjectService
 from timbrescribe.domain.score import ScoreBuilder
+from timbrescribe.infrastructure.assistant import AssistantSettingsStore
 from timbrescribe.infrastructure.basic_pitch import detect_basic_pitch
 from timbrescribe.infrastructure.exporting import (
     MidiExporter,
@@ -43,6 +44,7 @@ from timbrescribe.infrastructure.workers.qt_muscriptor_installer import (
     QtMuscriptorInstallerClient,
 )
 from timbrescribe.ui import MainWindow
+from timbrescribe.ui.assistant_controller import AssistantController
 from timbrescribe.ui.basic_pitch_controller import BasicPitchController
 from timbrescribe.ui.editing_controller import EditingController
 from timbrescribe.ui.media_controller import MediaWorkflowController
@@ -148,4 +150,10 @@ def build_main_window(paths: AppPaths | None = None) -> MainWindow:
         transport=media_controller,
     )
     window.attach_editing_controller(editing_controller)
+    assistant_controller = AssistantController(
+        window.assistant_workspace,
+        editing_controller,
+        AssistantSettingsStore(app_paths.assistant_settings_file),
+    )
+    window.attach_assistant_controller(assistant_controller)
     return window

@@ -2,13 +2,13 @@
 
 ## Current milestone
 
-Phase 6 — Notation Refinement and Playback Polish (`v0.7.0`), implementation and local model-free acceptance complete on the stacked `agent/phase-6-notation-playback` branch.
+Phase 7 — Optional Local/Cloud Score Assistant (`v0.8.0`), implementation and model-free acceptance complete on the stacked `agent/phase-7-assistant` branch.
 
-Phase 5 real MuScriptor Small acceptance passed and PR #6 merged to `main` as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`. Phase 6 must complete its updated branch CI/review before milestone-order merge.
+Phase 5 real MuScriptor Small acceptance passed and PR #6 merged as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`. Phase 6 merged through PR #7 as `64e2a609bc9d3d33bef568ff1b79857cfbb765c2`. Phase 7 must complete updated branch CI/review before milestone-order merge.
 
 ## Current application version
 
-`0.7.0` (pre-alpha, unreleased).
+`0.8.0` (pre-alpha, unreleased).
 
 ## Merged baseline
 
@@ -18,7 +18,30 @@ Phase 5 real MuScriptor Small acceptance passed and PR #6 merged to `main` as `c
 - Phase 3 reviewed notation and professional exports merged by PR #4 as `afc13fbccc51585de648600633b8c8fa629b4e4a`.
 - Phase 4 editing and persistence merged by PR #5 as `207d0945a98d127ae7e461d109d8ae5b78d39bde`.
 - Phase 5 gated multi-part MuScriptor integration and real Small acceptance merged by PR #6 as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`.
-- Phase 6 is stacked on the accepted Phase 5 branch and is not yet merged.
+- Phase 6 deterministic notation refinement and synchronized playback merged by PR #7 as `64e2a609bc9d3d33bef568ff1b79857cfbb765c2`.
+- Phase 7 is stacked on the accepted Phase 6 branch and is not yet merged.
+
+## Completed in Phase 7
+
+- Added the two-method `AssistantProvider` application port, an offline-capable loopback llama.cpp adapter for a user-selected GGUF, and a generic credential-free OpenAI-compatible HTTPS endpoint with user-selected model ID.
+- Added OS credential-service BYOK storage namespaced by endpoint. Non-secret provider settings are separate, atomic, and omit keys and cloud consent.
+- Added an explicit Qwen 4B-class GGUF guidance manifest without weights, automatic download, fixed source, or inferred license acceptance. Local child processes receive only a minimal runtime/GPU environment allowlist.
+- Added bounded data-minimized requests requiring selected stable note IDs or an explicit measure range. The UI shows exact project/request JSON; cloud sends require a fresh checkbox approval invalidated by any scope/configuration/project change.
+- Added strict schema-v1 response parsing with unknown-field/operation rejection, stable-note/part/range validation, no code/path operation, stale-revision rejection, and content-free metadata logging.
+- Added deterministic application mappings for transpose, tempo, meter, key, quantize, low-confidence deletion, instrument profile, rhythm simplification, piano-hand split, and explanation-only responses.
+- Added immutable command preview, deterministic diff, destructive labeling, explicit confirmation for every mutation, ordinary undo history, provider failure isolation, and off-GUI-thread provider calls.
+- Added model-free unit and Qt workflow coverage plus assistant privacy documentation and ADR 0017.
+
+## Phase 7 acceptance matrix
+
+| `AGENTS.md` acceptance requirement | Evidence | Status |
+|---|---|---|
+| Core app works with assistant disabled | Fresh app-data GUI test starts with provider `off`; complete default suite remains model/provider-free | Passed |
+| Local assistant can run offline after user installs a model | Loopback-only llama-server lifecycle test uses a user-supplied GGUF and no remote endpoint | Passed (adapter/model-free); manual real-GGUF smoke documented |
+| Invalid output cannot mutate project or execute code | Strict schema rejects unknown/code operations; GUI invalid-value test preserves content identity | Passed |
+| Cloud mode never sends audio | Payload and exact-preview tests reject media/archive/path/secret fields; provider receives only bounded symbolic context | Passed |
+| Destructive actions are previewed and confirmed | GUI test labels deletion destructive, preserves note count before confirmation, applies after confirmation, and undoes | Passed |
+| Every mutating command has a deterministic test | All nine mutating operations repeat identical command/diff plans; Qt confirmation/undo covers session integration | Passed |
 
 ## Completed in Phase 6
 
@@ -61,21 +84,26 @@ Phase 5 real MuScriptor Small acceptance passed and PR #6 merged to `main` as `c
 | Command | Result |
 |---|---|
 | `uv lock --check` | Passed: 142 packages resolved |
-| `ruff format --check .` | Passed: 164 files formatted |
+| `ruff format --check .` | Passed: 178 files formatted |
 | `ruff check .` | Passed |
-| `mypy src/timbrescribe` | Passed: 114 source files, strict mode |
-| `pytest -m "not model and not packaging"` | Passed: 193 tests, 2 opt-in model tests deselected, 76.85% branch-aware coverage |
+| `mypy src/timbrescribe` | Passed: 126 source files, strict mode |
+| `pytest -m "not model and not packaging"` | Passed: 214 tests, 2 opt-in model tests deselected, 77.07% branch-aware coverage |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
 | `benchmarks/score_pipeline.py --notes 1000 --runs 3` | Passed: 0.201 s median score-to-MusicXML, 0.299 s preview, 49.3 MiB peak working set |
 | `benchmarks/score_pipeline.py --notes 10000 --runs 3` | Passed: 2.100 s median score-to-MusicXML, 2.816 s preview, 114.2 MiB peak working set |
 | 10k `--compare` at `--max-regression-ratio 1.25` | Passed: every timing ratio 1.0046–1.0117; no regressed metrics |
 | `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked default environment |
-| `uv build --wheel` and content audit | Passed: `timbrescribe-0.7.0-py3-none-any.whl`, 123 files, required manifests present, no weights/ONNX/native executables |
+| `uv build --wheel` and content audit | Passed: `timbrescribe-0.8.0-py3-none-any.whl`, 136 files, assistant manifest present, no weights/ONNX/native executables; SHA-256 `71678c380372e3c98eedc8c8d00621fdcf2f142e5f03eb3d0e243f09c1628289` |
 | Gated real MuScriptor Small test | Passed in 20.70 s: exact revision/hash, `torch==2.13.0+cu126`, 3 labels, 3 score parts; aggregate evidence in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md` |
+
+## In progress
+
+- Phase 7 implementation and model-free acceptance are complete; updated branch quality/CI and PR #8 merge remain.
+- Phase 8 release hardening is implemented on its stacked branch and must not merge before Phase 7.
 
 ## Known issues / blockers
 
-- Phase 6 is locally complete but its updated branch quality/CI and PR #7 merge remain pending.
+- Phase 7 must complete updated branch quality/CI and PR #8 merge before Phase 8 can merge.
 - MuseScore is not installed on this machine, so external release-MuseScore round-trip acceptance remains pending even though availability gating is tested.
 - The fallback preview is intentionally a timing-review pulse instrument, not production orchestration. A FluidSynth/SoundFont adapter remains optional pending explicit license and redistribution review.
 - Tempo, key, and chord analysis are reviewable suggestions rather than authoritative automatic analysis.
@@ -83,7 +111,7 @@ Phase 5 real MuScriptor Small acceptance passed and PR #6 merged to `main` as `c
 
 ## Next recommended task
 
-Run the complete Phase 6 quality gates, push the Phase 5 acceptance merge to PR #7, complete Windows CI/review, and merge Phase 6 before propagating into Phase 7.
+Run the complete Phase 7 quality gates, push the accepted stack update to PR #8, complete Windows CI/review, and merge Phase 7 before propagating into Phase 8.
 
 ## Last updated date
 

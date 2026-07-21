@@ -41,3 +41,16 @@ Future model entries must record the same fields. MuScriptor weights must never 
 The Small and Medium records are independent. A terms/revision change invalidates the corresponding local acceptance and hash verification. TimbreScribe's installer requests only the immutable `model.safetensors` and `config.json`, verifies size/hash/configuration, and promotes them only into its managed application-data directory. The inference worker accepts only that verified local safetensors path and does not enable remote code. Medium stays disabled until the exact Small installation verifies.
 
 The provider conditions require the operator to have the necessary rights or permission for source music and output use. TimbreScribe records a non-secret terms version and per-run rights confirmation for provenance, but this is engineering evidence rather than legal advice. No project contributor or automated test accepts the provider's terms on a user's behalf.
+
+## User-supplied assistant GGUF
+
+| Field | Recorded value |
+|---|---|
+| Recommended class | Qwen 4B-class instruction-tuned GGUF |
+| Model ID / revision | User-selected; no permanent model or revision is distributed |
+| Weight hash | User-selected; not a release artifact |
+| License | Must be reviewed by the user for the exact selected model |
+| Gating / acceptance | No automatic download or acceptance; local path selection is explicit |
+| Current distribution | No assistant model weight, llama.cpp binary, or native runtime is committed, bundled, or downloaded by TimbreScribe |
+
+The application manifest is configuration guidance, not permission to use or redistribute any particular weight. A future release may name or bundle an assistant model only after recording its exact source, revision, files, hashes, license, attribution, commercial-use conditions, and redistribution decision.

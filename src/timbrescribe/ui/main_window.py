@@ -32,6 +32,7 @@ from timbrescribe.domain.transcription import RawTranscription
 from timbrescribe.infrastructure.basic_pitch import BasicPitchAvailability
 from timbrescribe.infrastructure.musescore import MuseScoreAvailability, open_in_musescore
 from timbrescribe.infrastructure.workers.qt_mock_client import QtMockWorkerClient
+from timbrescribe.ui.assistant_workspace import AssistantWorkspace
 from timbrescribe.ui.basic_pitch_workspace import BasicPitchWorkspace
 from timbrescribe.ui.editing_workspace import EditingWorkspace
 from timbrescribe.ui.media_workspace import MediaWorkspace
@@ -44,6 +45,7 @@ from timbrescribe.ui.waveform import WaveformWidget
 
 if TYPE_CHECKING:
     from timbrescribe.application import ProjectVersionToken
+    from timbrescribe.ui.assistant_controller import AssistantController
     from timbrescribe.ui.basic_pitch_controller import BasicPitchController
     from timbrescribe.ui.editing_controller import EditingController
     from timbrescribe.ui.media_controller import MediaWorkflowController
@@ -79,6 +81,7 @@ class MainWindow(QMainWindow):
         self._muscriptor_controller: MuscriptorController | None = None
         self._notation_controller: NotationController | None = None
         self._editing_controller: EditingController | None = None
+        self._assistant_controller: AssistantController | None = None
         self._mock_start_token: ProjectVersionToken | None = None
         self._mock_started_without_project = True
         self._musescore_availability = musescore_availability
@@ -140,6 +143,7 @@ class MainWindow(QMainWindow):
         self.waveform_view = WaveformWidget(self)
         self.piano_roll_view = PianoRollWidget(self)
         self.editing_workspace = EditingWorkspace(self)
+        self.assistant_workspace = AssistantWorkspace(self)
         self.tabs = QTabWidget(self)
         self.verovio_tab_index = self.tabs.addTab(self.verovio_view, _tr("Verovio 乐谱"))
         self.tabs.addTab(self.score_preview, _tr("乐谱"))
@@ -155,6 +159,10 @@ class MainWindow(QMainWindow):
         self.editing_tab_index = self.tabs.addTab(
             self.editing_workspace,
             _tr("可编辑乐谱"),
+        )
+        self.assistant_tab_index = self.tabs.addTab(
+            self.assistant_workspace,
+            _tr("Score assistant"),
         )
         self.setCentralWidget(self.tabs)
 
@@ -297,6 +305,10 @@ class MainWindow(QMainWindow):
     def editing_controller(self) -> EditingController | None:
         return self._editing_controller
 
+    @property
+    def assistant_controller(self) -> AssistantController | None:
+        return self._assistant_controller
+
     def attach_editing_controller(self, controller: EditingController) -> None:
         """Attach Phase 4 editing and persistence after media transport is wired."""
 
@@ -315,6 +327,17 @@ class MainWindow(QMainWindow):
         self.editing_workspace.part_view_changed.connect(self._on_part_view_changed)
         self.save_project_action.setEnabled(controller.session is not None)
         self.save_project_as_action.setEnabled(controller.session is not None)
+
+    def attach_assistant_controller(self, controller: AssistantController) -> None:
+        """Attach the opt-in Phase 7 assistant after editing state exists."""
+
+        if self._assistant_controller is not None:
+            raise RuntimeError("An assistant controller is already attached")
+        self._assistant_controller = controller
+        controller.setParent(self)
+        controller.status.connect(self.statusBar().showMessage)
+        controller.diagnostic.connect(self._append_diagnostic)
+        controller.error.connect(self._show_error)
 
     def _build_toolbar(self) -> None:
         toolbar = QToolBar(_tr("工作台工具"), self)
@@ -1019,6 +1042,8 @@ class MainWindow(QMainWindow):
         if not self._confirm_replace_project():
             event.ignore()
             return
+        if self._assistant_controller is not None:
+            self._assistant_controller.shutdown()
         if self._editing_controller is not None:
             self._editing_controller.shutdown()
         if self._basic_pitch_controller is not None:

@@ -15,9 +15,13 @@ from timbrescribe.application.editing import (
     RequantizeCommand,
     ResizeNotesCommand,
     SetChordSymbolCommand,
+    SetKeySignatureCommand,
+    SetMeterCommand,
+    SetTempoCommand,
     SetVelocityCommand,
 )
 from timbrescribe.application.jobs import JobManager, JobRecord, JobState
+from timbrescribe.application.services.assistant import AssistantService
 from timbrescribe.application.services.notation import NotationService
 from timbrescribe.application.services.phase_zero import PhaseZeroService, ScorePresentation
 from timbrescribe.application.services.project import ProjectService
@@ -25,6 +29,7 @@ from timbrescribe.application.services.project import ProjectService
 __all__ = [
     "AddNoteCommand",
     "AssignNotesCommand",
+    "AssistantService",
     "ChangePartInstrumentCommand",
     "CompositeEditCommand",
     "DeleteChordSymbolCommand",
@@ -44,5 +49,8 @@ __all__ = [
     "ResizeNotesCommand",
     "ScorePresentation",
     "SetChordSymbolCommand",
+    "SetKeySignatureCommand",
+    "SetMeterCommand",
+    "SetTempoCommand",
     "SetVelocityCommand",
 ]

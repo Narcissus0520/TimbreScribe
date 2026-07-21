@@ -134,6 +134,7 @@ class EditingController(QObject):
     diagnostic = Signal(str)
     error = Signal(str, str, str, str)
     recovery_available = Signal(object)
+    selection_changed = Signal(object)
 
     def __init__(
         self,
@@ -170,6 +171,7 @@ class EditingController(QObject):
         self._autosave.setInterval(60_000)
         self._autosave.timeout.connect(self.start_autosave)
         self._connect_signals()
+        self._workspace.roll.selection_changed.connect(self.selection_changed)
         QTimer.singleShot(0, self._offer_recovery)
 
     @property
@@ -183,6 +185,10 @@ class EditingController(QObject):
     @property
     def dirty(self) -> bool:
         return self._session.dirty if self._session is not None else False
+
+    @property
+    def selected_note_ids(self) -> tuple[str, ...]:
+        return self._workspace.selected_ids
 
     @property
     def io_busy(self) -> bool:
@@ -514,14 +520,20 @@ class EditingController(QObject):
         if commands:
             self._execute(CompositeEditCommand(tuple(commands), "Edit note properties"))
 
-    def _execute(self, command: object) -> None:
+    def execute_validated_command(self, command: EditCommand) -> bool:
+        """Execute a command already validated by an application service."""
+
+        return self._execute(command)
+
+    def _execute(self, command: EditCommand) -> bool:
         session = self._require_session()
         try:
-            session.execute(command)  # type: ignore[arg-type]
+            session.execute(command)
         except (TimbreScribeError, ValueError) as exc:
             self._report_edit_error(exc)
-            return
+            return False
         self._refresh()
+        return True
 
     def _refresh(self, presentation: ScorePresentation | None = None) -> None:
         session = self._require_session()
