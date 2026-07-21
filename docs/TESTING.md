@@ -79,13 +79,44 @@ The default model-free suite tests every mutating assistant operation determinis
 
 A manual local provider smoke requires a separately installed `llama-server.exe` and user-reviewed GGUF. TimbreScribe does not fetch either artifact. Select a small score excerpt, preview the exact JSON, request one supported operation, verify the deterministic diff, confirm it, and undo it. A cloud smoke additionally requires the operator to choose an HTTPS endpoint/model, save their own API key in the OS credential service, and approve the exact data for that one request. Never use secrets or copyrighted media in committed tests.
 
-## Test layers through Phase 7
+## Phase 8 packaging and installed smoke
+
+Build from the locked release environment and verified FFmpeg directory:
+
+```powershell
+uv sync --frozen --group dev --group basic-pitch
+./packaging/scripts/build_onedir.ps1 -FfmpegDirectory C:\verified-ffmpeg\bin -Clean
+$env:TIMBRESCRIBE_PACKAGED_APP = "$PWD\work\release\dist\TimbreScribe"
+uv run pytest -m packaging --no-cov
+```
+
+The packaging suite recomputes every recorded file hash, requires complete top-level notices,
+allows exactly one Basic Pitch `nmp.onnx` of the approved hash, rejects MuScriptor/GGUF weights,
+starts the windowed executable offscreen, completes a Mock protocol-v1 job through the packaged
+Worker and validates its artifact, and preloads the real Basic Pitch ONNX runtime/model. It never
+uses source `python -m` for those process checks.
+
+After compiling with pinned Inno Setup 7.0.2:
+
+```powershell
+./packaging/scripts/build_installer.ps1
+./packaging/scripts/test_installer.ps1 -Installer .\work\release\artifacts\TimbreScribe-0.9.0-windows-x64-setup.exe
+```
+
+The installer test uses a fresh temporary location/application-data root, verifies installed GUI
+smoke and HKCU association, performs an in-place upgrade, checks settings/project preservation,
+silently uninstalls, and verifies association cleanup without deleting data. The Windows release
+workflow performs the same gates and uploads only unsigned, short-retention candidates. Final v1
+still requires the pristine Windows 10/11 and accessibility matrix in `CLEAN_MACHINE_VALIDATION.md`.
+
+## Test layers through Phase 8
 
 - Unit/property: source-media invariants, cache keys/cleanup, waveform/dual-preview playback/loop state, exact score-time conversion, raw/settings/provenance validation, Basic Pitch and MuScriptor normalization/error boundaries, exact quantization and triplets, continuity-aware hand/voice allocation, percussion mapping, harmony suggestions, rhythm profiles, non-mutating range diagnostics, multi-part grouping/projection, editable instrument/chord mapping, assistant request minimization/schema/scope/command mapping/diffs, command execute/undo/redo, stale-version rejection, project migrations, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
 - Contract: protocol v1 parsing, Basic Pitch and MuScriptor request settings, gated terms/rights/local-safetensors validation, unknown-field compatibility, incompatible-version errors, stdout JSONL discipline, progress, warning, result, failure, and cancellation. No credential is a protocol field.
 - Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, MuScriptor process startup without optional imports, result loading, pinned Verovio 6.2.1 multi-page rendering, secure `.timbrescribe` round trips, and SVG/PNG/vector-PDF export.
 - GUI: offscreen media responsiveness, Mock paths, fully functional model/assistant-absent startup, Basic Pitch persistent-client reuse, confidence-filtered raw roll, total/part navigation, part-profile remapping and part exports, keyboard/multi-selection editing, inspector commands, undo/redo, save/reopen, stale-result rejection, unsaved-close prompts, reviewed notation controls, Verovio page state, professional exports, raw MIDI export, assistant privacy/diff/confirmation/no-mutation workflows, and forced-cancel no-promotion behavior using `pytest-qt`.
 - Model (opt-in): exact Basic Pitch/ONNX availability, real CPU inference, persistent model reuse, provenance, and Qt responsiveness; separately gated exact MuScriptor Small inference on explicitly approved local multi-instrument material.
+- Packaging (opt-in): artifact inventory/file hashes, model allowlist, frozen GUI initialization, frozen Mock JSONL/result, frozen Basic Pitch preload, and installer/association/upgrade/uninstall preservation.
 
 ## Manual smoke test
 
@@ -117,5 +148,7 @@ Then:
 20. Simulate cancellation, worker crash, and out-of-memory and confirm no partial result replaces the current project. Change an unknown-label part to another instrument profile and undo it while the raw label remains unchanged.
 21. Open “Score assistant” and confirm it is disabled by default. Select one or more notes, choose local mode with a reviewed llama-server/GGUF, preview the exact JSON, generate a supported proposal, inspect its diff, confirm it, and undo it.
 22. If explicitly testing a cloud provider, choose a credential-free HTTPS endpoint and model, save a BYOK key through the OS credential service, verify the preview contains no media/path/archive/credential data, approve that exact request, then delete the stored key.
+23. In the packaged build, open Help → About and inspect project notice, generated third-party inventory, model terms, and privacy tabs. Export diagnostics and verify no local path/token/media/project is present.
+24. Toggle light/dark themes, traverse the full workflow by keyboard, then repeat at 100%, 150%, and 200% Windows scaling with Narrator as recorded in `ACCESSIBILITY_AND_DPI_REVIEW.md`.
 
 Pinned Verovio integration is automated. Do not claim the external MuseScore round trip until MuseScore 4 is explicitly installed and used; the current development machine reports it unavailable.

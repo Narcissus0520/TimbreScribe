@@ -14,9 +14,9 @@
 | Weight license | No separate weight license is present in the verified 0.4.0 wheel; the bundled ONNX file is treated under the repository/wheel Apache-2.0 notice pending release review |
 | Commercial use | Apache-2.0 permits commercial use, subject to its terms and the future packaged artifact review |
 | Gating / acceptance | None observed for the public PyPI wheel |
-| Current distribution | Downloaded only by the optional developer group; neither wheel nor model is committed or included in the TimbreScribe wheel |
+| Current distribution | The source wheel/repository does not contain the model. The reviewed Windows onedir/installer stages exactly the hash-verified `nmp.onnx` from the locked Apache-2.0 wheel; TensorFlow, TFLite and CoreML weights/runtimes are excluded |
 
-The application verifies the exact model hash before enabling the engine. The optional `uv` group excludes TensorFlow, CoreML, and TFLite dependencies from Basic Pitch's upstream Python 3.11 metadata and installs ONNX Runtime CPU only. Because `resampy` 0.4.2 imports the removed `pkg_resources.resource_filename` API, the isolated model process supplies only that one operation using `importlib`; it does not install Setuptools for runtime compatibility. This is a repository-local development resolution, not a public pip extra; a future installer must reproduce and audit the resolved artifact explicitly.
+The application verifies the exact model hash before enabling the engine. The optional `uv` group and release environment exclude TensorFlow, CoreML, and TFLite dependencies from Basic Pitch's upstream Python 3.11 metadata and install ONNX Runtime CPU only. Because `resampy` 0.4.2 imports the removed `pkg_resources.resource_filename` API, the isolated model process supplies only that one operation using `importlib`; it does not install Setuptools for runtime compatibility. The Windows release reproduces this resolution, copies only `nmp.onnx`, and binds it into the release hash manifest. ADR 0018 records the redistribution decision.
 
 Future model entries must record the same fields. MuScriptor weights must never be committed or bundled.
 

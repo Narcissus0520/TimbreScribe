@@ -2,13 +2,13 @@
 
 ## Current milestone
 
-Phase 7 — Optional Local/Cloud Score Assistant (`v0.8.0`), implementation and model-free acceptance complete on the stacked `agent/phase-7-assistant` branch.
+Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, local artifact, and installed-lifecycle acceptance complete on the stacked `agent/phase-8-release-hardening` branch.
 
-Phase 5 real MuScriptor Small acceptance remains pending because no user token, exact-terms acceptance, verified weights, or approved local multi-instrument audio is currently available. Phases 6 and 7 do not weaken or falsely satisfy that independent gate, and stacked branches must still merge in milestone order.
+Phase 5 real MuScriptor Small acceptance remains pending because no user token, exact-terms acceptance, verified weights, or approved local multi-instrument audio is currently available. Phases 6–8 do not weaken or falsely satisfy that independent gate, and stacked branches must still merge in milestone order. Final v1 also retains pristine no-Python Windows 10/11, manual Narrator/DPI, signing, and publication-authorization gates.
 
 ## Current application version
 
-`0.8.0` (pre-alpha, unreleased).
+`0.9.0` (unsigned release candidate, unreleased).
 
 ## Merged baseline
 
@@ -20,6 +20,30 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 - Phase 5 is implemented on `agent/phase-5-multipart-muscriptor` but is intentionally not merged or presented as accepted until the real Small-model gate passes.
 - Phase 6 is implemented and pushed on `agent/phase-6-notation-playback`; it is stacked on Phase 5 and therefore cannot merge ahead of it.
 - Phase 7 is implemented on `agent/phase-7-assistant`; it is stacked on Phase 6 and must merge only after Phases 5 and 6.
+- Phase 8 is implemented on `agent/phase-8-release-hardening`; it is stacked on Phase 7 and must merge only after Phases 5–7.
+
+## Completed in Phase 8
+
+- Added pinned PyInstaller 6.21.0 onedir packaging with one shared Analysis/PYZ, a windowed GUI executable, a console Worker helper, and an exact frozen Worker allowlist with no shell command strings.
+- Bundled verified replaceable FFmpeg shared files, Verovio, Qt/PySide, ONNX Runtime CPU, and exactly one hash-verified Basic Pitch `nmp.onnx`; excluded TensorFlow/TFLite/CoreML, MuScriptor/GGUF/gated weights, credentials, media, projects, and settings.
+- Added artifact-specific runtime distribution/license inventory, Qt source/relinking notice, model/privacy notices, sorted per-file SHA-256 release provenance, and deterministic ZIP generation.
+- Added pinned Inno Setup 7.0.2 per-user installer with optional shortcuts, HKCU `.timbrescribe` association, in-place upgrade preservation, uninstall association cleanup, and explicit managed model/cache/log cleanup prompt that never targets projects/settings/recovery/credentials.
+- Added packaged GUI, Mock protocol/artifact, Basic Pitch preload, model allowlist, notice, and manifest tests; added installed GUI/association/upgrade/uninstall preservation automation and a manual pristine Windows matrix.
+- Added bounded redacted crash records/diagnostic ZIPs, scoped cache/log cleanup, high-DPI initialization, persistent light/dark themes, visible keyboard focus, semantic accessible names, and About tabs for version/licenses/inventory/model/privacy.
+- Added user guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADR 0018.
+
+## Phase 8 acceptance matrix
+
+| `AGENTS.md` acceptance requirement | Evidence | Status |
+|---|---|---|
+| Runs without system Python | PyInstaller executables complete GUI/Mock/Basic Pitch packaging tests through their own embedded runtime | Passed locally; pristine no-Python Win10/11 VM matrix remains final v1 gate |
+| Mock pipeline works | Packaged Worker protocol-v1 round trip produces and validates the 12-note polyphonic artifact | Passed |
+| Basic Pitch installation/use path | Installer bundles only verified ONNX CPU weight/runtime; packaged Worker verifies and preloads it | Passed |
+| Missing optional models do not block | GUI smoke starts with assistant off and no MuScriptor/assistant weights; default suite remains model-free | Passed |
+| File association and safe lifecycle | Temporary install, GUI smoke, in-place upgrade, setting/project preservation, association registration/removal, and silent uninstall | Passed on Windows 10 build 19045 |
+| Licenses/manifests/hashes | 54 resolved runtime distributions, 95 staged notice files, exact model/FFmpeg records, and artifact-wide file hash manifest | Passed |
+| Accessibility/high DPI | DPI policy, themes, focus/semantic-name tests and review documented | Implemented; manual Narrator and 100/150/200% display matrix pending v1 |
+| No P0/P1 | Automated source/artifact/installer gates have no known P0/P1 defect | Passed for current local scope; pristine RC matrix pending |
 
 ## Completed in Phase 7
 
@@ -83,36 +107,41 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 
 | Command | Result |
 |---|---|
-| `uv lock --check` | Passed: 142 packages resolved |
-| `ruff format --check .` | Passed: 178 files formatted |
+| `uv lock --check` | Passed: 147 packages resolved |
+| `ruff format --check .` | Passed: 190 files formatted |
 | `ruff check .` | Passed |
-| `mypy src/timbrescribe` | Passed: 126 source files, strict mode |
-| `pytest` with verified FFmpeg | Passed: 213 tests, 2 opt-in model tests skipped, 76.70% branch-aware coverage |
+| `mypy src/timbrescribe` | Passed: 131 source files, strict mode |
+| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 223 tests, 6 deselected, 76.84% branch-aware coverage |
+| Packaged artifact suite | Passed: 4 tests against frozen GUI/Workers, artifact-wide hashes/notices, one ONNX model |
+| Inno installed lifecycle | Passed: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
 | `benchmarks/score_pipeline.py --notes 1000 --runs 3` | Passed: 0.201 s median score-to-MusicXML, 0.299 s preview, 49.3 MiB peak working set |
 | `benchmarks/score_pipeline.py --notes 10000 --runs 3` | Passed: 2.100 s median score-to-MusicXML, 2.816 s preview, 114.2 MiB peak working set |
 | 10k `--compare` at `--max-regression-ratio 1.25` | Passed: every timing ratio 1.0046–1.0117; no regressed metrics |
-| `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked default environment |
-| `uv build --wheel` and content audit | Passed: `timbrescribe-0.8.0-py3-none-any.whl`, 136 files, assistant manifest present, no weights/ONNX/native executables; SHA-256 `71678c380372e3c98eedc8c8d00621fdcf2f142e5f03eb3d0e243f09c1628289` |
+| `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked release environment |
+| `uv build --wheel` and content audit | Passed: `timbrescribe-0.9.0-py3-none-any.whl`, 141 files, no model/native executables; SHA-256 `3334ccc0afdf0878e797e2b80d07dc7711e546b835460e9a007b1c0cb797f1c3` |
+| Phase 8 release benchmark | GUI 1.374 s, Mock 0.513 s, Basic Pitch preload 2.134 s medians; onedir 1,065.105 MiB, installer 263.201 MiB |
 | Gated real MuScriptor Small test | Not run by design; operator prerequisites remain absent |
 
 ## In progress
 
-- Phase 7 implementation and model-free acceptance are complete; no Phase 7 implementation item remains in progress.
+- Phase 8 implementation and local release-candidate acceptance are complete; no source implementation item remains in progress.
 - Phase 5 real Small-model acceptance remains intentionally paused until the user restores the required token and supplies the remaining operator prerequisites.
-- Phase 8 release hardening will begin on a new stacked branch after the Phase 7 checkpoint is pushed.
+- Final v1 operational acceptance remains pending pristine no-Python Windows 10/11 and manual Narrator/DPI RC runs, plus explicit authorization for signing/publication.
 
 ## Known issues / blockers
 
 - Phase 5 cannot be accepted or merged until the exact current Small model terms are explicitly accepted, a credential is stored, pinned weights verify, and the opt-in isolated test passes on approved local multi-instrument material with per-run rights confirmation.
-- Phases 6 and 7 are locally complete but stacked; neither may merge to `main` before the Phase 5 gate and Phase 5 PR complete.
+- Phases 6–8 are locally complete but stacked; none may merge to `main` before the Phase 5 gate and Phase 5 PR complete.
+- A pristine Windows 10 and Windows 11 x64 environment with no Python is not available in the current workspace; the exact installer matrix and GitHub workflow are implemented but cannot be represented as run on those two client VMs.
+- Code signing and public release/hash publication have not been authorized; locally built candidates are explicitly unsigned and remain under `work/`.
 - MuseScore is not installed on this machine, so external release-MuseScore round-trip acceptance remains pending even though availability gating is tested.
 - The fallback preview is intentionally a timing-review pulse instrument, not production orchestration. A FluidSynth/SoundFont adapter remains optional pending explicit license and redistribution review.
 - Tempo, key, and chord analysis are reviewable suggestions rather than authoritative automatic analysis.
 
 ## Next recommended task
 
-Commit and push Phase 7 without merging it ahead of the gated stack, then begin Phase 8 packaging/release engineering on a new stacked branch. When the user later restores the token and supplies the remaining operator prerequisites, return to the preserved Phase 5 gate, run the real Small acceptance, and merge Phases 5, 6, 7, and 8 in order.
+Commit and push the Phase 8 checkpoint, rebuild once from that clean commit so provenance names the exact source, and keep it stacked without merging ahead of Phase 5. When the user restores the token and supplies the remaining operator prerequisites, run the real Small acceptance, create/merge Phases 5, 6, 7, and 8 in order, then execute the pristine Win10/11 and manual accessibility RC matrix before any authorized v1 signing/publication.
 
 ## Last updated date
 
