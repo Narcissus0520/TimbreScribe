@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Phase 5 — Multi-Part Score and MuScriptor Experimental Adapter (`v0.6.0`), implementation complete but real Small-model acceptance still gated.
+Phase 5 — Multi-Part Score and MuScriptor Experimental Adapter (`v0.6.0`), implementation and real Small-model acceptance complete; branch CI/merge remains.
 
 ## Current application version
 
@@ -31,6 +31,8 @@ Phase 5 — Multi-Part Score and MuScriptor Experimental Adapter (`v0.6.0`), imp
 - Added an experimental/non-commercial workspace with exact terms link/revision, explicit acceptance, token save/delete, Small-first/Medium-after-Small gating, capability-driven instrument conditioning, CPU/CUDA preflight, per-run media-rights confirmation, and actionable fallback guidance.
 - Kept default installation, startup, CI, Mock, Basic Pitch, editing, project persistence, notation, and every export fully functional with neither MuScriptor nor Torch installed.
 - Added model-free domain/contract/worker/management/process/GUI tests, an opt-in real Small-model acceptance test requiring approved local material, `tools/setup_muscriptor.ps1`, ADR 0015, architecture/testing/license documentation, and third-party notices.
+- Fixed the Windows first-load deadlock by loading the first verified MuScriptor runtime before starting the blocking stdin reader thread; model-free Hello startup remains runtime-free and a regression test fixes the ordering.
+- Added an explicit SHA-256-pinned PyTorch 2.13.0 CUDA 12.6 setup/verification path while retaining CPU as the default portable fallback.
 
 ## Phase 5 acceptance matrix
 
@@ -39,22 +41,19 @@ Phase 5 — Multi-Part Score and MuScriptor Experimental Adapter (`v0.6.0`), imp
 | Application remains fully functional without MuScriptor installed | Default dependency sync plus the complete model-free suite runs with both `muscriptor` and `torch` absent | Passed |
 | No gated model is downloaded without explicit acceptance | Unit and isolated-process installer tests fail with the license error before the download adapter is reached | Passed |
 | No token appears in logs/project files | Credential, protocol, artifact, diagnostic-redaction, archive round-trip, repository, and wheel-content checks | Passed |
-| Small produces multiple parts on approved material | Opt-in isolated-worker acceptance test exists, but no terms acceptance, verified weights, or approved audio currently exist | **Blocked on operator action** |
+| Small produces multiple parts on approved material | Exact accepted Small revision/hash produced 3 model labels and 3 internal score parts from an operator-approved local excerpt | Passed |
 | Unsupported/unknown labels map safely and remain editable | Domain and GUI tests cover generic mapping, part remap, undo, and immutable raw labels | Passed |
 | Crash/out-of-memory preserves the project | Worker/controller crash, cancellation, and OOM simulations retain the prior raw/project snapshot | Passed |
 | MuScriptor is visibly experimental/non-commercial | GUI assertions pin the banner, exact model/revision/license link, model size/location, password token field, and Small-before-Medium gating | Passed |
 
 ## In progress
 
-- Obtain explicit operator acceptance of the exact current MuScriptor Small model terms and provider conditions through the application.
-- Install and hash-verify the exact Small weights, then run the opt-in real-model test on explicitly approved local multi-instrument material.
-- Only after that evidence passes: mark Phase 5 accepted, open the Phase 5 PR, complete Windows CI/review, and merge it before Phase 6.
+- Push the first-load deadlock fix, CUDA setup path, and aggregate acceptance evidence to the existing Phase 5 PR.
+- Complete updated Windows CI/review and merge Phase 5 before Phase 6.
 
 ## Known issues / blockers
 
-- **Phase 5 acceptance blocker:** no operator has explicitly accepted `MuScriptor/muscriptor-small@8c127f603b807520fa465c838e9bfee8a91ada4e`; no gated weights have been downloaded. The required real Small multi-part inference test therefore has not run and must not be claimed.
-- Approved local multi-instrument test material and an explicit source-media-rights confirmation are still required for the real-model gate. Synthetic tones are not treated as recognition-quality evidence.
-- Medium code/manifest/UI support exists but remains disabled until the exact Small installation verifies; Medium has no separate stability claim.
+- Medium code/manifest/UI support exists and becomes selectable only when the exact Small installation verifies; Medium remains experimental and has no separate stability claim.
 - The current NVIDIA GTX 1660 Ti has 6 GiB VRAM with roughly 5 GiB observed free during inspection. Small may use CUDA after a fresh preflight; Medium's 6 GiB recommendation leaves no safe margin, so CPU/Small guidance is expected.
 - MuseScore is not installed on the current development machine, so automatic availability gating is tested but the external “open in release MuseScore” acceptance check remains pending on a machine with MuseScore 4.
 - Tempo and key detection are intentionally conservative suggestions, not automatic authoritative analysis.
@@ -67,25 +66,26 @@ Phase 5 — Multi-Part Score and MuScriptor Experimental Adapter (`v0.6.0`), imp
 |---|---|
 | `uv sync --frozen --group dev` | Passed; default environment contains neither `muscriptor` nor `torch` |
 | `tools/setup_muscriptor.ps1` code-runtime check | Passed with MuScriptor 0.2.1 and CPU Torch 2.13.0; no acceptance record or managed weight file was created; default environment was restored afterward |
+| `tools/setup_muscriptor.ps1 -VerifyOnly -TorchRuntime cuda126` | Passed with `torch==2.13.0+cu126`, CUDA build 12.6, GTX 1660 Ti, and a real device tensor; no model/network action |
 | `uv lock --check` | Passed: 142 packages resolved from the current lock |
 | `ruff format --check .` | Passed: 153 files formatted |
 | `ruff check .` | Passed |
 | `mypy src/timbrescribe` | Passed: 108 source files, strict mode |
-| `pytest -m "not model and not packaging"` | Passed: 173 tests, 2 opt-in model tests deselected; 75.33% branch-aware coverage; 75% floor enforced |
+| `pytest -m "not model and not packaging"` | Passed: 174 tests, 2 opt-in model tests deselected; 75.78% branch-aware coverage; 75% floor enforced |
 | MuScriptor default-absence import check | Passed: application composition and full model-free suite run without MuScriptor/Torch imports |
 | MuScriptor installer pre-acceptance process test | Passed: exact license error returned before network/model activation; token absent from diagnostics |
 | MuScriptor worker process hello | Passed without optional runtime/model installed; declared protocol-v1 local-safetensors/multi-instrument capabilities |
 | Multi-part GUI/model-free workflow | Passed: total + three part views, per-part XML/MIDI, unknown generic mapping, editable remap, undo, and raw-label preservation |
 | crash/OOM/cancel controller simulations | Passed: previous raw/project state retained and no partial result promoted |
-| gated real Small model test | **Not run:** intentionally blocked pending explicit exact-terms acceptance, credential, verified weights, approved material, and rights confirmation |
+| gated real Small model test | Passed in 20.70 s: exact revision/hash, `torch==2.13.0+cu126`, 3 labels, 3 score parts; privacy-minimized evidence in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md` |
 | W3C MusicXML 4.0 XSD | Passed: hash-pinned official schemas validated generated piano, B-flat, E-flat, and F fixtures |
 | `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked default environment |
 | `uv build --wheel` and wheel content audit | Passed: `timbrescribe-0.6.0-py3-none-any.whl`, 117 files, manifest present, no weights/ONNX/native executables/Torch runtime |
-| Phase 5 GitHub Actions Windows CI | Pending Phase 5 PR after the real Small acceptance gate |
+| Phase 5 GitHub Actions Windows CI | Existing PR #6 passed before the acceptance fix; updated run pending push |
 
 ## Next recommended task
 
-Have the operator review and explicitly accept the exact Small model terms in the MuScriptor panel, provide/store a valid gated-model token, and identify approved local multi-instrument audio. Then install/verify Small and run `tests/model/test_muscriptor_model.py`; do not proceed to Phase 6 or merge Phase 5 before this acceptance evidence exists.
+Run the complete Phase 5 source/Windows CI gates on the acceptance fix, merge PR #6, and then propagate the accepted Phase 5 commit through the stacked Phase 6–8 branches in order.
 
 ## Last updated date
 
