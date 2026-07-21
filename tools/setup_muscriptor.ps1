@@ -1,5 +1,7 @@
 param(
-    [switch]$VerifyOnly
+    [switch]$VerifyOnly,
+    [ValidateSet("cpu", "cuda126")]
+    [string]$TorchRuntime = "cpu"
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,7 +30,18 @@ try {
     if (-not (Test-Path -LiteralPath $managedPython -PathType Leaf)) {
         throw "The managed Python environment is missing. Run this script without -VerifyOnly."
     }
-    & $managedPython tools/verify_muscriptor.py
+    if (-not $VerifyOnly -and $TorchRuntime -eq "cuda126") {
+        $cudaWheel = "https://download-r2.pytorch.org/whl/cu126/torch-2.13.0%2Bcu126-cp311-cp311-win_amd64.whl#sha256=8095729db14e7fd5178a39676fdd679208eff4041407ea34e3d898336c90f5c5"
+        & $uvExecutable pip install --python $managedPython --reinstall --no-deps $cudaWheel
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to install the pinned PyTorch CUDA 12.6 runtime."
+        }
+    }
+    $verificationArguments = @("tools/verify_muscriptor.py")
+    if ($TorchRuntime -eq "cuda126") {
+        $verificationArguments += "--require-cuda126"
+    }
+    & $managedPython @verificationArguments
     if ($LASTEXITCODE -ne 0) {
         throw "MuScriptor code-runtime verification failed."
     }

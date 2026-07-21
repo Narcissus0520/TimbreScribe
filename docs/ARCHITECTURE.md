@@ -251,4 +251,4 @@ The professional view uses pinned local Verovio 6.2.1 through its Python toolkit
 
 ## Deferred architecture
 
-Assistant providers, packaging, and full artifact-specific license manifests remain deferred to their ordered milestones. Higher-quality FluidSynth/SoundFont preview remains optional until license and redistribution review. Real MuScriptor Small inference acceptance remains gated on explicit user terms acceptance, credential-backed verified weights, and approved local test material.
+Assistant providers, packaging, and full artifact-specific license manifests remain deferred to their ordered milestones. Higher-quality FluidSynth/SoundFont preview remains optional until license and redistribution review. Future MuScriptor revisions remain gated on explicit terms acceptance, credential-backed verified weights, and approved local test material; the pinned Small revision's aggregate real-inference evidence is recorded in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md`.

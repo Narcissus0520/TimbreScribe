@@ -4,7 +4,7 @@
 
 Phase 6 — Notation Refinement and Playback Polish (`v0.7.0`), implementation and local model-free acceptance complete on the stacked `agent/phase-6-notation-playback` branch.
 
-Phase 5 real MuScriptor Small acceptance remains pending because no user token, exact-terms acceptance, verified weights, or approved local multi-instrument audio is currently available. Phase 6 does not weaken or falsely satisfy that independent gate, and stacked branches must still merge in milestone order.
+Phase 5 real MuScriptor Small acceptance passed and PR #6 merged to `main` as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`. Phase 6 must complete its updated branch CI/review before milestone-order merge.
 
 ## Current application version
 
@@ -17,8 +17,8 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 - Phase 2 Basic Pitch baseline merged by PR #3 as `f5f92547b9276e02513a8c5c52f09d94cfc3b750`.
 - Phase 3 reviewed notation and professional exports merged by PR #4 as `afc13fbccc51585de648600633b8c8fa629b4e4a`.
 - Phase 4 editing and persistence merged by PR #5 as `207d0945a98d127ae7e461d109d8ae5b78d39bde`.
-- Phase 5 is implemented on `agent/phase-5-multipart-muscriptor` but is intentionally not merged or presented as accepted until the real Small-model gate passes.
-- Phase 6 is stacked on Phase 5 and therefore cannot merge ahead of it.
+- Phase 5 gated multi-part MuScriptor integration and real Small acceptance merged by PR #6 as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`.
+- Phase 6 is stacked on the accepted Phase 5 branch and is not yet merged.
 
 ## Completed in Phase 6
 
@@ -44,14 +44,14 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 | Range diagnostics do not mutate notes silently | Domain equality test and GUI out-of-range edit retain MIDI 127 while emitting `SOUNDING_RANGE` | Passed |
 | Long-score benchmark stays within documented threshold | Selected 10k baseline: 2.100 s score-to-MusicXML and 2.816 s preview; immediate comparison ratios 1.0046–1.0117, all below 1.25 | Passed |
 
-## Phase 5 gate retained
+## Phase 5 acceptance retained
 
 | Requirement | Current state |
 |---|---|
 | Application works without MuScriptor | Passed in the complete default suite |
 | No gated download without exact acceptance | Passed by installer process tests |
 | No token in logs/projects | Passed by protocol, persistence, diagnostic, repository, and wheel audits |
-| Small produces multiple parts on approved material | **Pending operator token, acceptance, verified weights, approved audio, and rights confirmation** |
+| Small produces multiple parts on approved material | Passed: exact Small produced 3 model labels and 3 internal score parts from an operator-approved local excerpt |
 | Unknown labels remain safe/editable | Passed |
 | Crash/OOM preserves project | Passed |
 | Experimental/non-commercial labeling | Passed |
@@ -64,26 +64,26 @@ Phase 5 real MuScriptor Small acceptance remains pending because no user token, 
 | `ruff format --check .` | Passed: 164 files formatted |
 | `ruff check .` | Passed |
 | `mypy src/timbrescribe` | Passed: 114 source files, strict mode |
-| `pytest -m "not model and not packaging"` | Passed: 192 tests, 2 opt-in model tests deselected, 76.44% branch-aware coverage |
+| `pytest -m "not model and not packaging"` | Passed: 193 tests, 2 opt-in model tests deselected, 76.85% branch-aware coverage |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
 | `benchmarks/score_pipeline.py --notes 1000 --runs 3` | Passed: 0.201 s median score-to-MusicXML, 0.299 s preview, 49.3 MiB peak working set |
 | `benchmarks/score_pipeline.py --notes 10000 --runs 3` | Passed: 2.100 s median score-to-MusicXML, 2.816 s preview, 114.2 MiB peak working set |
 | 10k `--compare` at `--max-regression-ratio 1.25` | Passed: every timing ratio 1.0046–1.0117; no regressed metrics |
 | `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked default environment |
 | `uv build --wheel` and content audit | Passed: `timbrescribe-0.7.0-py3-none-any.whl`, 123 files, required manifests present, no weights/ONNX/native executables |
-| Gated real MuScriptor Small test | Not run by design; operator prerequisites remain absent |
+| Gated real MuScriptor Small test | Passed in 20.70 s: exact revision/hash, `torch==2.13.0+cu126`, 3 labels, 3 score parts; aggregate evidence in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md` |
 
 ## Known issues / blockers
 
-- Phase 5 cannot be accepted or merged until the exact current Small model terms are explicitly accepted, a credential is stored, pinned weights verify, and the opt-in isolated test passes on approved local multi-instrument material with per-run rights confirmation.
-- Phase 6 is locally complete but stacked; it must not merge to `main` before the Phase 5 gate and Phase 5 PR complete.
+- Phase 6 is locally complete but its updated branch quality/CI and PR #7 merge remain pending.
 - MuseScore is not installed on this machine, so external release-MuseScore round-trip acceptance remains pending even though availability gating is tested.
 - The fallback preview is intentionally a timing-review pulse instrument, not production orchestration. A FluidSynth/SoundFont adapter remains optional pending explicit license and redistribution review.
 - Tempo, key, and chord analysis are reviewable suggestions rather than authoritative automatic analysis.
+- Medium MuScriptor remains experimental and has no separate real-model stability claim.
 
 ## Next recommended task
 
-Commit and push the completed Phase 6 branch without merging it ahead of Phase 5, then begin Phase 7 on a new stacked branch. When the user later restores the token and supplies the remaining operator prerequisites, return to the preserved Phase 5 gate, run the real Small acceptance, and merge Phase 5 then Phase 6 in order.
+Run the complete Phase 6 quality gates, push the Phase 5 acceptance merge to PR #7, complete Windows CI/review, and merge Phase 6 before propagating into Phase 7.
 
 ## Last updated date
 
