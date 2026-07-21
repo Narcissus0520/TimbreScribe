@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import replace
 from fractions import Fraction
 from pathlib import Path
@@ -40,8 +41,9 @@ from timbrescribe.domain.project import (
     ProjectMediaReference,
     create_editing_project,
 )
-from timbrescribe.domain.score import ChordSymbol
+from timbrescribe.domain.score import ChordSymbol, score_duration_seconds
 from timbrescribe.infrastructure.exporting import MidiExporter
+from timbrescribe.infrastructure.preview_synthesis import QtPreviewSynthesisClient
 from timbrescribe.ui.editing_workspace import EditingWorkspace
 
 if TYPE_CHECKING:
@@ -129,6 +131,7 @@ class EditingController(QObject):
     history_changed = Signal(bool, bool)
     project_path_changed = Signal(object)
     status = Signal(str, int)
+    diagnostic = Signal(str)
     error = Signal(str, str, str, str)
     recovery_available = Signal(object)
 
@@ -138,7 +141,9 @@ class EditingController(QObject):
         notation: NotationService,
         projects: ProjectService,
         midi: MidiExporter,
-        preview_path: Path,
+        preview_midi_path: Path,
+        preview_audio_path: Path,
+        preview_synthesis: QtPreviewSynthesisClient,
         *,
         source_media: Callable[[], SourceMedia | None],
         transport: MediaWorkflowController,
@@ -149,7 +154,13 @@ class EditingController(QObject):
         self._notation = notation
         self._projects = projects
         self._midi = midi
-        self._preview_path = preview_path
+        self._preview_midi_path = preview_midi_path
+        self._preview_audio_path = preview_audio_path
+        self._preview_synthesis = preview_synthesis
+        self._preview_synthesis.setParent(self)
+        self._preview_request_id: str | None = None
+        self._active_preview_audio_path: Path | None = None
+        self._last_diagnostics: tuple[str, ...] = ()
         self._source_media = source_media
         self._transport = transport
         self._session: EditingSession | None = None
@@ -337,6 +348,7 @@ class EditingController(QObject):
 
     def shutdown(self) -> None:
         self._autosave.stop()
+        self._preview_synthesis.shutdown()
         thread = self._io_thread
         if thread is not None and thread.isRunning():
             thread.requestInterruption()
@@ -373,6 +385,8 @@ class EditingController(QObject):
         self._transport.playback_position_changed.connect(
             lambda position: self._workspace.set_playhead_seconds(position / 1_000)
         )
+        self._preview_synthesis.completed.connect(self._preview_completed)
+        self._preview_synthesis.failed.connect(self._preview_failed)
 
     def _add_note(self, beat_value: object, pitch: int) -> None:
         if not isinstance(beat_value, Fraction):
@@ -513,17 +527,15 @@ class EditingController(QObject):
         session = self._require_session()
         project = session.project
         self._workspace.set_project(project)
-        self._preview_path.parent.mkdir(parents=True, exist_ok=True)
+        self._preview_midi_path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            preview = self._midi.export(project.score, self._preview_path)
-            score_end = max(
-                (note.end_beat for note in project.score.all_notes),
-                default=project.score.measure_duration_beats,
+            self._midi.export(project.score, self._preview_midi_path)
+            request_id = uuid4().hex
+            self._preview_request_id = request_id
+            destination = self._preview_audio_path.with_name(
+                f"{self._preview_audio_path.stem}-{request_id}{self._preview_audio_path.suffix}"
             )
-            duration_ms = round(
-                float(score_end * Fraction(60_000, project.notation_settings.tempo_bpm))
-            )
-            self._transport.set_score_preview(preview, max(1, duration_ms))
+            self._preview_synthesis.start(request_id, project.score, destination)
             rendered = (
                 presentation
                 if presentation is not None and presentation.project.score == project.score
@@ -536,8 +548,51 @@ class EditingController(QObject):
         except (OSError, TimbreScribeError, ValueError) as exc:
             self._report_edit_error(exc)
             return
+        for message in rendered.diagnostics:
+            if message not in self._last_diagnostics:
+                self.diagnostic.emit(message)
+        self._last_diagnostics = rendered.diagnostics
         self.presentation_ready.emit(rendered)
         self._emit_state()
+
+    def _preview_completed(self, request_id: str, path_value: object) -> None:
+        if not isinstance(path_value, Path):
+            return
+        if request_id != self._preview_request_id:
+            self._discard_preview_path(path_value)
+            return
+        session = self._require_session()
+        duration_ms = max(1, round(float(score_duration_seconds(session.project.score) * 1_000)))
+        try:
+            self._transport.set_score_preview(path_value, duration_ms)
+        except (OSError, ValueError) as exc:
+            self._preview_failed(request_id, str(exc))
+            return
+        previous = self._active_preview_audio_path
+        self._active_preview_audio_path = path_value
+        if previous is not None and previous != path_value:
+            self._discard_preview_path(previous)
+        self.status.emit(self.tr("Deterministic score preview audio is ready."), 4_000)
+
+    def _preview_failed(self, request_id: str, message: str) -> None:
+        if request_id != self._preview_request_id:
+            return
+        self.error.emit(
+            self.tr("Score preview synthesis failed"),
+            message,
+            self.tr("The score remains editable; retry after the next edit."),
+            "",
+        )
+
+    def _discard_preview_path(self, path: Path) -> None:
+        resolved = path.expanduser().resolve()
+        parent = self._preview_audio_path.expanduser().resolve().parent
+        prefix = f"{self._preview_audio_path.stem}-"
+        if resolved.parent != parent or not resolved.name.startswith(prefix):
+            return
+        # Qt Multimedia may briefly retain the previous file on Windows.
+        with suppress(OSError):
+            resolved.unlink(missing_ok=True)
 
     def _emit_state(self) -> None:
         session = self._session

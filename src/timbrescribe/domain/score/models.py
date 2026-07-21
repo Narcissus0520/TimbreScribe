@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from math import ceil
 from typing import Literal
@@ -296,6 +296,8 @@ class ScoreDocument:
     meter_map: MeterMap | None = None
     key_map: KeyMap | None = None
     chord_symbols: tuple[ChordSymbol, ...] = ()
+    _all_notes: tuple[ScoreNote, ...] = field(init=False, repr=False, compare=False)
+    _measure_count: int = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -334,24 +336,28 @@ class ScoreDocument:
             self.chord_symbols
         ):
             raise ValueError("Chord symbols must be in stable score order")
-
-    @property
-    def all_notes(self) -> tuple[ScoreNote, ...]:
-        """Return notes from all parts in stable score order."""
-
-        return tuple(
+        all_notes = tuple(
             sorted(
                 (note for part in self.parts for note in part.notes),
                 key=lambda note: (note.start_beat, note.part_id, note.sounding_pitch, note.id),
             )
         )
+        measure_duration = Fraction(self.beats_per_measure * 4, self.beat_unit)
+        end = max((note.end_beat for note in all_notes), default=Fraction(0))
+        object.__setattr__(self, "_all_notes", all_notes)
+        object.__setattr__(self, "_measure_count", max(1, ceil(end / measure_duration)))
+
+    @property
+    def all_notes(self) -> tuple[ScoreNote, ...]:
+        """Return notes from all parts in stable score order."""
+
+        return self._all_notes
 
     @property
     def measure_count(self) -> int:
         """Return the number of measures needed to contain every note."""
 
-        end = max((note.end_beat for note in self.all_notes), default=Fraction(0))
-        return max(1, ceil(end / self.measure_duration_beats))
+        return self._measure_count
 
     @property
     def measure_duration_beats(self) -> Fraction:

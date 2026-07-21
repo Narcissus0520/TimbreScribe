@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fractions import Fraction
 
-from PySide6.QtCore import QRectF, QSize, Qt
-from PySide6.QtGui import QColor, QFont, QPainter, QPaintEvent, QPen
+from PySide6.QtCore import QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QMouseEvent, QPainter, QPaintEvent, QPen
 from PySide6.QtWidgets import QWidget
 
 from timbrescribe.domain.score import ScoreDocument
@@ -14,9 +14,12 @@ from timbrescribe.domain.score import ScoreDocument
 class ScorePreviewWidget(QWidget):
     """Draw a compact staff preview until pinned local Verovio assets are integrated."""
 
+    seek_beat_requested = Signal(object)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._score: ScoreDocument | None = None
+        self._playhead_beat = Fraction(0)
         self.setMinimumSize(560, 300)
         self.setObjectName("scorePreview")
 
@@ -30,6 +33,21 @@ class ScorePreviewWidget(QWidget):
 
     def set_score(self, score: ScoreDocument | None) -> None:
         self._score = score
+        self._playhead_beat = Fraction(0)
+        self.update()
+
+    @property
+    def current_note_ids(self) -> tuple[str, ...]:
+        if self._score is None:
+            return ()
+        return tuple(
+            note.id
+            for note in self._score.all_notes
+            if note.start_beat <= self._playhead_beat < note.end_beat
+        )
+
+    def set_playhead_beat(self, beat: Fraction) -> None:
+        self._playhead_beat = max(Fraction(0), beat)
         self.update()
 
     def sizeHint(self) -> QSize:
@@ -104,10 +122,23 @@ class ScorePreviewWidget(QWidget):
                 + self._ratio(note.start_beat + Fraction(1, 2), total_beats) * staff_width
             )
             y = staff_top + 2 * line_spacing - (note.sounding_pitch - 71) * (line_spacing / 4)
-            painter.setBrush(QColor("#6db4ff"))
-            painter.setPen(QPen(QColor("#b9dcff"), 1.0))
+            active = note.start_beat <= self._playhead_beat < note.end_beat
+            painter.setBrush(QColor("#ffd166") if active else QColor("#6db4ff"))
+            painter.setPen(QPen(QColor("#ffe29a") if active else QColor("#b9dcff"), 1.0))
             painter.drawEllipse(QRectF(x - 7, y - 4.5, 14, 9))
             painter.drawLine(int(x + 6), int(y), int(x + 6), int(y - 34))
+
+        playhead_x = (
+            margin_left
+            + self._ratio(min(self._playhead_beat, total_beats), total_beats) * staff_width
+        )
+        painter.setPen(QPen(QColor("#ffd166"), 1.6))
+        painter.drawLine(
+            int(playhead_x),
+            int(staff_top - 16),
+            int(playhead_x),
+            int(staff_top + 4 * line_spacing + 16),
+        )
 
         painter.setPen(QColor("#9da8b8"))
         painter.setFont(QFont("Segoe UI", 9))
@@ -126,3 +157,14 @@ class ScorePreviewWidget(QWidget):
     @staticmethod
     def _ratio(value: Fraction, total: Fraction) -> float:
         return float(value / total) if total else 0.0
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if self._score is not None and event.button() is Qt.MouseButton.LeftButton:
+            margin_left = 82.0
+            staff_width = max(120.0, self.width() - margin_left - 36.0)
+            ratio = max(0.0, min(1.0, (event.position().x() - margin_left) / staff_width))
+            total_beats = self._score.measure_duration_beats * self._score.measure_count
+            self.seek_beat_requested.emit(
+                Fraction(str(ratio)).limit_denominator(10_000) * total_beats
+            )
+        super().mousePressEvent(event)

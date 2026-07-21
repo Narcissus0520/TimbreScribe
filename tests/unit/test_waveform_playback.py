@@ -82,12 +82,13 @@ def test_score_only_preview_clock_and_loop_are_deterministic(
     qtbot: QtBot,
     tmp_path: Path,
 ) -> None:
-    preview = tmp_path / "preview.mid"
-    preview.write_bytes(b"MThd")
+    preview = tmp_path / "preview.wav"
+    _write_pcm(preview)
     service = SourcePlaybackService()
     positions: list[int] = []
     service.position_changed.connect(positions.append)
     service.set_preview(preview, 200)
+    service.set_preview_volume(0.5)
     service.set_loop_range(20, 60)
 
     service.play()
@@ -97,6 +98,7 @@ def test_score_only_preview_clock_and_loop_are_deterministic(
     assert 0 <= service.position_ms < 80
     service.seek(40)
     assert service.position_ms == 40
+    assert service._preview_player.source().toLocalFile().endswith("preview.wav")
     service.set_loop_range(None, None)
     service.stop()
     assert service.position_ms == 0

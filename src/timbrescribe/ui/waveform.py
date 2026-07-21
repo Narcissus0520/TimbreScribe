@@ -13,6 +13,7 @@ class WaveformWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._samples: tuple[float, ...] = ()
+        self._playhead_ratio = 0.0
         self.setMinimumSize(520, 260)
         self.setObjectName("waveformView")
 
@@ -20,12 +21,22 @@ class WaveformWidget(QWidget):
     def sample_count(self) -> int:
         return len(self._samples)
 
+    @property
+    def playhead_ratio(self) -> float:
+        return self._playhead_ratio
+
     def set_samples(self, samples: tuple[float, ...]) -> None:
         self._samples = samples
         self.update()
 
     def clear(self) -> None:
         self.set_samples(())
+
+    def set_playhead(self, position_ms: int, duration_ms: int) -> None:
+        self._playhead_ratio = (
+            max(0.0, min(1.0, position_ms / duration_ms)) if duration_ms > 0 else 0.0
+        )
+        self.update()
 
     def sizeHint(self) -> QSize:
         return QSize(800, 340)
@@ -54,6 +65,9 @@ class WaveformWidget(QWidget):
             x = 24 + (index / max(1, sample_total - 1)) * width
             magnitude = max(0.0, min(sample, 1.0)) * height
             painter.drawLine(int(x), int(center - magnitude), int(x), int(center + magnitude))
+        playhead_x = 24 + self._playhead_ratio * width
+        painter.setPen(QPen(QColor("#ffd166"), 2.0))
+        painter.drawLine(int(playhead_x), 12, int(playhead_x), self.height() - 36)
         painter.setPen(QColor("#9da8b8"))
         painter.drawText(
             QRectF(24, self.height() - 32, self.width() - 48, 20),

@@ -19,6 +19,12 @@ from timbrescribe.domain.score.models import (
     TempoMap,
 )
 from timbrescribe.domain.score.selection import select_score_parts
+from timbrescribe.domain.score.timing import (
+    beat_to_seconds,
+    score_duration_seconds,
+    seconds_to_beat,
+    tempo_events,
+)
 
 __all__ = [
     "ChordSymbol",
@@ -37,5 +43,9 @@ __all__ = [
     "ScoreProject",
     "TempoEvent",
     "TempoMap",
+    "beat_to_seconds",
+    "score_duration_seconds",
+    "seconds_to_beat",
     "select_score_parts",
+    "tempo_events",
 ]

@@ -96,15 +96,21 @@ class MusicXmlExporter:
         for part in score.parts:
             part_element = ET.SubElement(root, "part", {"id": part.id})
             segments = self._segments(part.notes, score.measure_duration_beats)
-            voices = sorted({note.voice for note in part.notes}) or [1]
-            voice_staves = {
-                voice: min(note.staff for note in part.notes if note.voice == voice)
-                for voice in voices
-                if any(note.voice == voice for note in part.notes)
-            }
+            voice_staves: dict[int, int] = {}
+            for note in part.notes:
+                voice_staves[note.voice] = min(
+                    note.staff,
+                    voice_staves.get(note.voice, note.staff),
+                )
+            voices = sorted(voice_staves) or [1]
             by_measure: dict[int, list[_NoteSegment]] = defaultdict(list)
             for segment in segments:
                 by_measure[segment.measure_index].append(segment)
+            harmonies_by_measure: dict[int, list[ChordSymbol]] = defaultdict(list)
+            for symbol in score.chord_symbols:
+                if symbol.part_id == part.id:
+                    symbol_measure = int(symbol.position_beat // score.measure_duration_beats)
+                    harmonies_by_measure[symbol_measure].append(symbol)
             for measure_index in range(score.measure_count):
                 measure = ET.SubElement(
                     part_element,
@@ -116,13 +122,7 @@ class MusicXmlExporter:
                     self._write_tempo(measure, score.tempo_bpm)
                 self._write_harmonies(
                     measure,
-                    tuple(
-                        symbol
-                        for symbol in score.chord_symbols
-                        if symbol.part_id == part.id
-                        and int(symbol.position_beat // score.measure_duration_beats)
-                        == measure_index
-                    ),
+                    tuple(harmonies_by_measure.get(measure_index, ())),
                     measure_index,
                     score.measure_duration_beats,
                     divisions,

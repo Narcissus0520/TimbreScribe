@@ -63,6 +63,10 @@ class EditablePianoRollWidget(QWidget):
     def note_count(self) -> int:
         return len(self._visible_notes())
 
+    @property
+    def playhead_beat(self) -> Fraction:
+        return self._playhead
+
     def set_project(self, project: EditingProject) -> None:
         self._project = project
         valid = {note.id for note in project.score.all_notes}

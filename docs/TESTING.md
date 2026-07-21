@@ -12,7 +12,7 @@ uv sync --group dev
 ```
 
 The script runs formatting, linting, strict typing, and all tests excluding the opt-in `model` and `packaging` markers.
-The separate XSD gate downloads the W3C MusicXML 4.0 schemas from the pinned `v4.0` source tag, verifies recorded hashes, generates piano/B-flat/E-flat/F fixtures, and validates them through .NET's offline schema engine. Windows CI runs this gate explicitly.
+The separate XSD gate downloads the W3C MusicXML 4.0 schemas from the pinned `v4.0` source tag, verifies recorded hashes, generates pitched/transposing/percussion/harmony/triplet fixtures, and validates them through .NET's offline schema engine. Windows CI runs this gate explicitly.
 
 ## Optional Basic Pitch model suite
 
@@ -63,9 +63,19 @@ uv run python benchmarks/project_archive.py --notes 1000
 
 The JSON reports the application/Python/platform identity, note count, archive size, save/load wall time, peak traced Python memory, and verified round-trip project ID.
 
-## Test layers through Phase 5
+## Phase 6 long-score benchmark
 
-- Unit/property: source-media invariants, cache keys/cleanup, waveform/playback/loop state, raw/settings/provenance validation, Basic Pitch and MuScriptor normalization/error boundaries, exact quantization, multi-part grouping/projection, editable instrument mapping, command execute/undo/redo, stale-version rejection, project migrations, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
+```powershell
+uv run python benchmarks/score_pipeline.py --notes 1000 --runs 3 --output benchmark-1000.json
+uv run python benchmarks/score_pipeline.py --notes 10000 --runs 3 --output benchmark-10000.json
+uv run python benchmarks/score_pipeline.py --notes 10000 --runs 3 --compare benchmark-10000.json
+```
+
+The benchmark records application/Python/hardware identity, settings, note and measure counts, median notation/MusicXML/preview timings, artifact sizes, and peak Windows working set. Same-machine comparisons fail when any timing exceeds the selected baseline by more than 25%; hardware or note-count mismatches are explicitly non-evaluated. The selected Phase 6 results and scenario are documented in [`benchmarks/PHASE_6_BASELINE.md`](benchmarks/PHASE_6_BASELINE.md); they are measurements, not cross-machine guarantees.
+
+## Test layers through Phase 6
+
+- Unit/property: source-media invariants, cache keys/cleanup, waveform/dual-preview playback/loop state, exact score-time conversion, raw/settings/provenance validation, Basic Pitch and MuScriptor normalization/error boundaries, exact quantization and triplets, continuity-aware hand/voice allocation, percussion mapping, harmony suggestions, rhythm profiles, non-mutating range diagnostics, multi-part grouping/projection, editable instrument/chord mapping, command execute/undo/redo, stale-version rejection, project migrations, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
 - Contract: protocol v1 parsing, Basic Pitch and MuScriptor request settings, gated terms/rights/local-safetensors validation, unknown-field compatibility, incompatible-version errors, stdout JSONL discipline, progress, warning, result, failure, and cancellation. No credential is a protocol field.
 - Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, MuScriptor process startup without optional imports, result loading, pinned Verovio 6.2.1 multi-page rendering, secure `.timbrescribe` round trips, and SVG/PNG/vector-PDF export.
 - GUI: offscreen media responsiveness, Mock paths, fully functional model-absent startup, Basic Pitch persistent-client reuse, confidence-filtered raw roll, total/part navigation, part-profile remapping and part exports, keyboard/multi-selection editing, inspector commands, undo/redo, save/reopen, stale-result rejection, unsaved-close prompts, reviewed notation controls, Verovio page state, professional exports, raw MIDI export, and forced-cancel no-promotion behavior using `pytest-qt`.

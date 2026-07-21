@@ -22,7 +22,12 @@ class SourcePlaybackService(QObject):
         self._audio.setVolume(0.7)
         self._player = QMediaPlayer(self)
         self._player.setAudioOutput(self._audio)
+        self._preview_audio = QAudioOutput(self)
+        self._preview_audio.setVolume(0.35)
+        self._preview_player = QMediaPlayer(self)
+        self._preview_player.setAudioOutput(self._preview_audio)
         self._source_set = False
+        self._preview_set = False
         self._preview_duration_ms = 0
         self._synthetic_position_ms = 0
         self._clock = QElapsedTimer()
@@ -34,6 +39,7 @@ class SourcePlaybackService(QObject):
         self._player.durationChanged.connect(self._duration_updated)
         self._player.playbackStateChanged.connect(self._state_updated)
         self._player.errorOccurred.connect(self._error_updated)
+        self._preview_player.errorOccurred.connect(self._error_updated)
 
     @property
     def position_ms(self) -> int:
@@ -52,22 +58,36 @@ class SourcePlaybackService(QObject):
 
     def set_preview(self, source: Path, duration_ms: int) -> None:
         if not source.expanduser().resolve().is_file():
-            raise ValueError("Score preview MIDI snapshot does not exist")
+            raise ValueError("Score preview audio snapshot does not exist")
         if duration_ms <= 0:
             raise ValueError("Score preview duration must be positive")
+        self._preview_player.setSource(QUrl.fromLocalFile(str(source.expanduser().resolve())))
+        self._preview_set = True
         self._preview_duration_ms = duration_ms
         self._synthetic_position_ms = min(self._synthetic_position_ms, duration_ms)
+        self._preview_player.setPosition(self.position_ms)
+        if self._source_set and (
+            self._player.playbackState() is QMediaPlayer.PlaybackState.PlayingState
+        ):
+            self._preview_player.play()
 
     def play(self) -> None:
         if self._source_set:
+            self._synchronize_preview(self._player.position(), force=True)
             self._player.play()
+            if self._preview_set:
+                self._preview_player.play()
         else:
             self._clock.restart()
             self._clock_timer.start()
+            if self._preview_set:
+                self._preview_player.setPosition(self._synthetic_position_ms)
+                self._preview_player.play()
             self.state_changed.emit("PlayingState")
 
     def pause(self) -> None:
         self._player.pause()
+        self._preview_player.pause()
         if not self._source_set:
             self._synthetic_position_ms = self.position_ms
             self._clock_timer.stop()
@@ -75,6 +95,7 @@ class SourcePlaybackService(QObject):
 
     def stop(self) -> None:
         self._player.stop()
+        self._preview_player.stop()
         self._clock_timer.stop()
         self._synthetic_position_ms = 0
         if not self._source_set:
@@ -85,8 +106,10 @@ class SourcePlaybackService(QObject):
         """Release backend resources before Qt begins object destruction."""
 
         self._player.stop()
+        self._preview_player.stop()
         self._clock_timer.stop()
         self._player.setSource(QUrl())
+        self._preview_player.setSource(QUrl())
 
     def seek(self, position_ms: int) -> None:
         position = max(0, min(position_ms, self.duration_ms))
@@ -97,6 +120,8 @@ class SourcePlaybackService(QObject):
             if self._clock_timer.isActive():
                 self._clock.restart()
             self.position_changed.emit(position)
+        if self._preview_set:
+            self._preview_player.setPosition(position)
 
     def set_loop_range(self, start_ms: int | None, end_ms: int | None) -> None:
         if start_ms is None or end_ms is None:
@@ -109,13 +134,23 @@ class SourcePlaybackService(QObject):
     def set_volume(self, volume: float) -> None:
         self._audio.setVolume(max(0.0, min(volume, 1.0)))
 
+    def set_preview_volume(self, volume: float) -> None:
+        self._preview_audio.setVolume(max(0.0, min(volume, 1.0)))
+
     def _position_updated(self, position_ms: int) -> None:
         if self._loop is not None and position_ms >= self._loop[1]:
             self.seek(self._loop[0])
             if self._player.playbackState() is QMediaPlayer.PlaybackState.PlayingState:
                 self.play()
             return
+        self._synchronize_preview(position_ms)
         self.position_changed.emit(position_ms)
+
+    def _synchronize_preview(self, position_ms: int, *, force: bool = False) -> None:
+        if not self._preview_set:
+            return
+        if force or abs(self._preview_player.position() - position_ms) > 60:
+            self._preview_player.setPosition(position_ms)
 
     def _synthetic_tick(self) -> None:
         position = self.position_ms

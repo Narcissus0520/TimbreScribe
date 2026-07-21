@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from fractions import Fraction
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -101,6 +102,14 @@ def test_manual_chord_edit_delete_and_undo(
     _run_success(main_window, qtbot)
     controller = main_window.editing_controller
     assert controller is not None and controller.session is not None
+    main_window.notation_workspace.generate_button.click()
+    qtbot.waitUntil(
+        lambda: (
+            controller.session is not None
+            and controller.session.project.score.parts[0].instrument_profile is not None
+        ),
+        timeout=5_000,
+    )
     workspace = main_window.editing_workspace
     assert "suggestions" in workspace.chord_notice.text()
 
@@ -130,6 +139,55 @@ def test_manual_chord_edit_delete_and_undo(
     main_window.undo_action.trigger()
     assert controller.session.project.score.chord_symbols == ()
     assert not controller.dirty
+
+
+def test_preview_audio_and_views_share_one_transport_position(
+    main_window: MainWindow,
+    qtbot: QtBot,
+) -> None:
+    _run_success(main_window, qtbot)
+    media = main_window.media_controller
+    assert media is not None
+    qtbot.waitUntil(lambda: media.playback_duration_ms > 0, timeout=3_000)
+
+    media.seek_synchronized(250)
+
+    assert main_window.editing_workspace.roll.playhead_beat == Fraction(1, 2)
+    assert main_window.piano_roll_view.playhead_seconds == 0.25
+    assert main_window.waveform_view.playhead_ratio == 0.125
+    assert main_window.score_preview.current_note_ids
+    assert (
+        main_window.verovio_view.highlighted_note_ids == main_window.score_preview.current_note_ids
+    )
+
+
+def test_manual_out_of_range_edit_is_reported_without_silent_correction(
+    main_window: MainWindow,
+    qtbot: QtBot,
+) -> None:
+    _run_success(main_window, qtbot)
+    controller = main_window.editing_controller
+    assert controller is not None and controller.session is not None
+    main_window.notation_workspace.generate_button.click()
+    qtbot.waitUntil(
+        lambda: (
+            controller.session is not None
+            and controller.session.project.score.parts[0].instrument_profile is not None
+        ),
+        timeout=5_000,
+    )
+    workspace = main_window.editing_workspace
+    note_id = controller.session.project.score.all_notes[0].id
+    workspace.roll.select_ids((note_id,))
+    workspace.pitch.setValue(127)
+    workspace.apply_button.click()
+
+    edited = next(note for note in controller.session.project.score.all_notes if note.id == note_id)
+    diagnostics = main_window.diagnostics.toPlainText()
+    main_window.undo_action.trigger()
+    assert not controller.dirty
+    assert edited.sounding_pitch == 127
+    assert "SOUNDING_RANGE" in diagnostics
 
 
 def test_save_reopen_preserves_ids_and_edits(

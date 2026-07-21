@@ -81,6 +81,10 @@ class MediaWorkflowController(QObject):
     def playback_position_ms(self) -> int:
         return self._playback.position_ms
 
+    @property
+    def playback_duration_ms(self) -> int:
+        return self._playback.duration_ms
+
     def set_score_preview(self, source: Path, duration_ms: int) -> None:
         self._playback.set_preview(source, duration_ms)
 
@@ -92,6 +96,9 @@ class MediaWorkflowController(QObject):
 
     def stop_synchronized(self) -> None:
         self._playback.stop()
+
+    def seek_synchronized(self, position_ms: int) -> None:
+        self._playback.seek(position_ms)
 
     def set_loop_range(self, start_ms: int | None, end_ms: int | None) -> None:
         self._playback.set_loop_range(start_ms, end_ms)

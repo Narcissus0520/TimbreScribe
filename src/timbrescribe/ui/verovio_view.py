@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from fractions import Fraction
 from html import escape
 
 from PySide6.QtCore import QUrl, Signal
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from timbrescribe.domain.errors import TimbreScribeError
+from timbrescribe.domain.score import ScoreDocument
 from timbrescribe.infrastructure.rendering import RenderedScore, VerovioRenderer
 
 
@@ -45,9 +47,11 @@ class VerovioScoreView(QWidget):
         super().__init__(parent)
         self._renderer = renderer or VerovioRenderer()
         self._document: str | None = None
+        self._score: ScoreDocument | None = None
         self._rendered: RenderedScore | None = None
         self._page_index = 0
         self._fit_mode = "width"
+        self._highlighted_note_ids: tuple[str, ...] = ()
 
         self.web_view: QWebEngineView | QTextBrowser
         if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
@@ -126,9 +130,33 @@ class VerovioScoreView(QWidget):
             return None
         return self._rendered.pages[self._page_index]
 
+    @property
+    def highlighted_note_ids(self) -> tuple[str, ...]:
+        return self._highlighted_note_ids
+
+    def set_score(self, score: ScoreDocument, document: str) -> None:
+        self._score = score
+        self._highlighted_note_ids = ()
+        self.set_musicxml(document)
+
     def set_musicxml(self, document: str) -> None:
         self._document = document
         self.reload_score()
+
+    def set_playhead_beat(self, beat: Fraction) -> None:
+        highlighted = (
+            tuple(
+                note.id for note in self._score.all_notes if note.start_beat <= beat < note.end_beat
+            )
+            if self._score is not None
+            else ()
+        )
+        if highlighted == self._highlighted_note_ids:
+            return
+        self._highlighted_note_ids = highlighted
+        if self._rendered is not None:
+            self._select_highlight_page()
+            self._show_current_page()
 
     def reload_score(self) -> None:
         if self._document is None:
@@ -148,8 +176,10 @@ class VerovioScoreView(QWidget):
 
     def clear(self) -> None:
         self._document = None
+        self._score = None
         self._rendered = None
         self._page_index = 0
+        self._highlighted_note_ids = ()
         self._show_message(self.tr("Generate notation to open the Verovio preview."))
         self._update_controls()
 
@@ -187,7 +217,7 @@ class VerovioScoreView(QWidget):
         html = (
             "<!doctype html><html><head><meta charset='utf-8'><style>"
             "html,body{margin:0;padding:4px;background:#d9dce2;overflow:auto}"
-            f"{rule}</style></head><body>{svg}</body></html>"
+            f"{rule}{self._highlight_css()}</style></head><body>{svg}</body></html>"
         )
         self._set_html(html)
         self._update_controls()
@@ -221,4 +251,27 @@ class VerovioScoreView(QWidget):
             self.tr("Page {page} / {count}").format(page=self.page_number, count=self.page_count)
             if enabled
             else self.tr("No score")
+        )
+
+    def _select_highlight_page(self) -> None:
+        if self._rendered is None:
+            return
+        for page_index, page in enumerate(self._rendered.pages):
+            if any(
+                f'id="{escape(note_id, quote=True)}"' in page
+                for note_id in self._highlighted_note_ids
+            ):
+                self._page_index = page_index
+                return
+
+    def _highlight_css(self) -> str:
+        selectors: list[str] = []
+        for note_id in self._highlighted_note_ids:
+            escaped_id = note_id.replace("\\", "\\\\").replace('"', '\\"')
+            selectors.extend((f'[id="{escaped_id}"]', f'[id^="{escaped_id}-m"]'))
+        if not selectors:
+            return ""
+        return (
+            f"{','.join(selectors)}{{fill:#ffb703!important;stroke:#7a4f00!important;"
+            "stroke-width:18!important}}"
         )

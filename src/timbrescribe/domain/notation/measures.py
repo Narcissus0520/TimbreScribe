@@ -13,20 +13,16 @@ def construct_measures(score: ScoreDocument) -> tuple[MeasurePlan, ...]:
     plans: list[MeasurePlan] = []
     measure_duration = score.measure_duration_beats
     for part in score.parts:
-        voices = sorted({note.voice for note in part.notes}) or [1]
-        voice_staves = {
-            voice: min(note.staff for note in part.notes if note.voice == voice)
-            for voice in voices
-            if any(note.voice == voice for note in part.notes)
-        }
-        for index in range(score.measure_count):
-            measure_start = index * measure_duration
-            measure_end = measure_start + measure_duration
-            spans = tuple(
-                span
-                for note in part.notes
-                if (span := _span(note, measure_start, measure_end)) is not None
+        voice_staves: dict[int, int] = {}
+        for note in part.notes:
+            voice_staves[note.voice] = min(
+                note.staff,
+                voice_staves.get(note.voice, note.staff),
             )
+        voices = sorted(voice_staves) or [1]
+        spans_by_measure = _spans_by_measure(part.notes, measure_duration)
+        for index in range(score.measure_count):
+            spans = tuple(spans_by_measure.get(index, ()))
             rests: list[RestSpan] = []
             for voice in voices:
                 voice_spans = sorted(
@@ -58,6 +54,25 @@ def construct_measures(score: ScoreDocument) -> tuple[MeasurePlan, ...]:
                     raise ValueError(f"Measure {index + 1} voice {voice} does not close exactly")
             plans.append(plan)
     return tuple(plans)
+
+
+def _spans_by_measure(
+    notes: tuple[ScoreNote, ...],
+    measure_duration: Fraction,
+) -> dict[int, list[MeasureNoteSpan]]:
+    result: dict[int, list[MeasureNoteSpan]] = defaultdict(list)
+    for note in notes:
+        position = note.start_beat
+        while position < note.end_beat:
+            measure_index = int(position // measure_duration)
+            measure_start = measure_index * measure_duration
+            measure_end = measure_start + measure_duration
+            span = _span(note, measure_start, measure_end)
+            if span is None:
+                raise AssertionError("A note segment must overlap its containing measure")
+            result[measure_index].append(span)
+            position = min(note.end_beat, measure_end)
+    return result
 
 
 def _span(

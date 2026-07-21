@@ -47,6 +47,10 @@ class AppPaths:
         return self.cache / "playback" / "current.mid"
 
     @property
+    def score_preview_audio(self) -> Path:
+        return self.cache / "playback" / "current.wav"
+
+    @property
     def recovery(self) -> Path:
         return self.root / "recovery"
 

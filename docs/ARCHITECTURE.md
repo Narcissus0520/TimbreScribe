@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Phase 0 proves the smallest honest score path. Phase 1 adds deterministic source-media handling. Phase 2 adds a verified Basic Pitch ONNX CPU baseline. Phase 3 converts immutable evidence into reviewed notation and professional local rendering/export. Phase 4 adds command editing and project persistence. Phase 5 adds multi-part score views and a gated, isolated MuScriptor adapter while preserving every earlier boundary.
+Phase 0 proves the smallest honest score path. Phase 1 adds deterministic source-media handling. Phase 2 adds a verified Basic Pitch ONNX CPU baseline. Phase 3 converts immutable evidence into reviewed notation and professional local rendering/export. Phase 4 adds command editing and project persistence. Phase 5 adds multi-part score views and a gated, isolated MuScriptor adapter. Phase 6 adds deterministic notation refinement, synchronized audible preview, and indexed long-score paths while preserving every earlier boundary.
 
 ## Dependency direction
 
@@ -23,7 +23,12 @@ separate persistent Basic Pitch worker
 
 media workflow controller
     -> asynchronous FFmpeg probe/decode and waveform adapters
-    -> Qt Multimedia source playback service
+    -> Qt Multimedia source + score-preview playback service
+
+preview synthesis client
+    -> application PreviewSynthesizer port
+    -> coalesced background deterministic PCM pulse renderer
+    -> immutable per-request WAV promoted only for the current score snapshot
 
 reviewed notation controller
     -> pure suggestion / quantization / voice / measure stages
@@ -148,7 +153,7 @@ Execute, undo, and redo all advance the revision even when undo restores saved c
 
 Autosave targets only the managed recovery directory and records project ID, timestamp, and optional primary path. Opening a recovery archive leaves it dirty until the user explicitly saves. Source media is referenced by Unicode path and SHA-256; it is not embedded automatically.
 
-The playback transport uses source media as the clock when available and drives the editable score playhead from millisecond position signals. Score-only projects use a deterministic local preview clock; Phase 6 owns synthesizer/audio-timbre refinement.
+The playback transport uses source media as the clock when available and keeps a separate score-preview player within 60 ms of that clock. Score-only projects use a deterministic local clock while playing the same generated preview WAV. Millisecond position signals drive waveform, raw piano roll, editable roll, compact score, and Verovio active-note state. Score-click seeking maps through exact tempo-map conversion.
 
 ## Phase 5 multi-part and MuScriptor flow
 
@@ -175,6 +180,33 @@ The GUI imports neither MuScriptor nor Torch. The installer and inference adapte
 The model manifest treats code and weights separately. Small and Medium have independent immutable revisions, hashes, terms versions, and resource requirements. Medium remains unavailable until Small verifies locally. Acceptance records are non-secret and live in application data; tokens live in the OS credential store; neither is part of a `.timbrescribe` project. A source-rights checkbox is deliberately per run and is recorded in the immutable run settings/artifact.
 
 Each distinct engine label creates a deterministic part ID. Known labels map to built-in editable notation profiles; an unknown or ambiguous future label stays visible and uses a safe generic profile until the user changes it through an undoable part-instrument command. Raw labels and note evidence are never rewritten. The editing workspace filters one part for navigation while the controller retains the full score, so changing the view cannot accidentally turn a total-score export into a part export.
+
+## Phase 6 notation refinement and preview flow
+
+```text
+immutable raw/edited notes + reviewed notation settings
+  -> rhythm profile resolves explicit quantization behavior
+  -> exact straight/triplet grid refinement
+  -> continuity-aware piano-hand split and per-staff voice allocation
+  -> pitched or explicit GM unpitched score semantics
+  -> conservative labeled chord suggestions + undoable manual edits
+  -> non-mutating written/sounding range diagnostics
+  -> cached ScoreDocument order/count + indexed measure/harmony construction
+  -> MusicXML 4.0 / MIDI snapshot
+
+current immutable ScoreDocument
+  -> coalescing Qt preview client (background thread)
+  -> PreviewSynthesizer port
+  -> deterministic 8 kHz mono PCM pulse WAV, atomically written
+  -> dual Qt Multimedia transport
+  -> one position stream for waveform, rolls, compact score, and Verovio
+```
+
+Suggested chord symbols always carry `source="suggested"` and confidence; an explicit edit converts one to `source="manual"`. Refreshing suggestions preserves manual symbols. Piano staff and voice values remain ordinary command-editable note properties, so heuristic placement is reversible and manually overridable. Percussion notes contain `PercussionNotation` instead of a pitched spelling and export `<unpitched>`, instrument IDs, `midi-unpitched`, notehead, and percussion clef semantics.
+
+The fallback synthesizer is intentionally a timing-review instrument rather than a bundled General MIDI sound library. It caches a bounded pulse waveform per MIDI pitch, mixes short onsets into an immutable WAV, and never downloads a SoundFont. Synthesis is off the GUI thread; a running request may finish, but intermediate queued edits are replaced by the newest snapshot and stale artifacts cannot become the active preview.
+
+Long-score consumers use cached stable score order/measure count and one-pass measure, voice/staff, harmony, and pulse indexes. The reproducible 1k/10k benchmark records same-machine timing and memory. Its 25% comparison gate is not applied across different hardware or note counts.
 
 ## Data ownership
 
@@ -219,4 +251,4 @@ The professional view uses pinned local Verovio 6.2.1 through its Python toolkit
 
 ## Deferred architecture
 
-Advanced voice/percussion notation, synthesized playback polish, assistant providers, packaging, and full artifact-specific license manifests remain deferred to their ordered milestones. Real MuScriptor Small inference acceptance remains gated on explicit user terms acceptance and approved local test material.
+Assistant providers, packaging, and full artifact-specific license manifests remain deferred to their ordered milestones. Higher-quality FluidSynth/SoundFont preview remains optional until license and redistribution review. Real MuScriptor Small inference acceptance remains gated on explicit user terms acceptance, credential-backed verified weights, and approved local test material.
