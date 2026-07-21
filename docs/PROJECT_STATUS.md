@@ -2,13 +2,13 @@
 
 ## Current milestone
 
-Phase 7 — Optional Local/Cloud Score Assistant (`v0.8.0`), implementation and model-free acceptance complete on the stacked `agent/phase-7-assistant` branch.
+Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, local artifact, and installed-lifecycle acceptance complete on `agent/phase-8-release-hardening`.
 
-Phase 5 real MuScriptor Small acceptance passed and PR #6 merged as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`. Phase 6 merged through PR #7 as `64e2a609bc9d3d33bef568ff1b79857cfbb765c2`. Phase 7 must complete updated branch CI/review before milestone-order merge.
+Phases 5–7 have passed their acceptance gates and merged to `main`. Phase 8 is undergoing its final propagated branch quality and GitHub CI review. Final v1 still retains pristine no-Python Windows 10/11, manual Narrator/DPI, signing, and publication-authorization gates.
 
 ## Current application version
 
-`0.8.0` (pre-alpha, unreleased).
+`0.9.0` (unsigned release candidate, unreleased).
 
 ## Merged baseline
 
@@ -19,17 +19,39 @@ Phase 5 real MuScriptor Small acceptance passed and PR #6 merged as `cb85b7eae8f
 - Phase 4 editing and persistence merged by PR #5 as `207d0945a98d127ae7e461d109d8ae5b78d39bde`.
 - Phase 5 gated multi-part MuScriptor integration and real Small acceptance merged by PR #6 as `cb85b7eae8f38c903ec024d6d6c5561d7f50cb3e`.
 - Phase 6 deterministic notation refinement and synchronized playback merged by PR #7 as `64e2a609bc9d3d33bef568ff1b79857cfbb765c2`.
-- Phase 7 is stacked on the accepted Phase 6 branch and is not yet merged.
+- Phase 7 optional local/cloud score assistant merged by PR #8 as `2a4ce6c9eb1b00d2011ffe3b24778f5329bf71b4`.
+- Phase 8 is implemented on `agent/phase-8-release-hardening`; final branch quality, PR #9 CI, and merge remain.
+
+## Completed in Phase 8
+
+- Added pinned PyInstaller 6.21.0 onedir packaging with one shared Analysis/PYZ, a windowed GUI executable, a console Worker helper, and an exact frozen Worker allowlist with no shell command strings.
+- Bundled verified replaceable FFmpeg shared files, Verovio, Qt/PySide, ONNX Runtime CPU, and exactly one hash-verified Basic Pitch `nmp.onnx`; excluded TensorFlow/TFLite/CoreML, MuScriptor/GGUF/gated weights, credentials, media, projects, and settings.
+- Added artifact-specific runtime distribution/license inventory, Qt source/relinking notice, model/privacy notices, sorted per-file SHA-256 release provenance, and deterministic ZIP generation.
+- Added pinned Inno Setup 7.0.2 per-user installer with optional shortcuts, HKCU `.timbrescribe` association, in-place upgrade preservation, uninstall association cleanup, and explicit managed model/cache/log cleanup prompt that never targets projects/settings/recovery/credentials.
+- Added packaged GUI, Mock protocol/artifact, Basic Pitch preload, model allowlist, notice, and manifest tests; added installed GUI/association/upgrade/uninstall preservation automation and a manual pristine Windows matrix.
+- Added bounded redacted crash records/diagnostic ZIPs, scoped cache/log cleanup, high-DPI initialization, persistent light/dark themes, visible keyboard focus, semantic accessible names, and About tabs for version/licenses/inventory/model/privacy.
+- Fixed first-launch dock collapse with explicit initial proportions, scrollable MuScriptor/notation forms, and keyboard/menu-reachable actions for every dock; the regression is covered by a live-widget GUI test.
+- Added user guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADR 0018.
+
+## Phase 8 acceptance matrix
+
+| `AGENTS.md` acceptance requirement | Evidence | Status |
+|---|---|---|
+| Runs without system Python | PyInstaller executables complete GUI/Mock/Basic Pitch packaging tests through their own embedded runtime | Passed locally; pristine no-Python Win10/11 VM matrix remains final v1 gate |
+| Mock pipeline works | Packaged Worker protocol-v1 round trip produces and validates the 12-note polyphonic artifact | Passed |
+| Basic Pitch installation/use path | Installer bundles only verified ONNX CPU weight/runtime; packaged Worker verifies and preloads it | Passed |
+| Missing optional models do not block | GUI smoke starts with assistant off and no MuScriptor/assistant weights; default suite remains model-free | Passed |
+| File association and safe lifecycle | Temporary install, GUI smoke, in-place upgrade, setting/project preservation, association registration/removal, and silent uninstall | Passed on Windows 10 build 19045 |
+| Licenses/manifests/hashes | 54 resolved runtime distributions, 95 staged notice files, exact model/FFmpeg records, and artifact-wide file hash manifest | Passed |
+| Accessibility/high DPI | DPI policy, themes, focus/semantic-name tests and review documented | Implemented; manual Narrator and 100/150/200% display matrix pending v1 |
+| No P0/P1 | Automated source/artifact/installer gates have no known P0/P1 defect | Passed for current local scope; pristine RC matrix pending |
 
 ## Completed in Phase 7
 
 - Added the two-method `AssistantProvider` application port, an offline-capable loopback llama.cpp adapter for a user-selected GGUF, and a generic credential-free OpenAI-compatible HTTPS endpoint with user-selected model ID.
 - Added OS credential-service BYOK storage namespaced by endpoint. Non-secret provider settings are separate, atomic, and omit keys and cloud consent.
-- Added an explicit Qwen 4B-class GGUF guidance manifest without weights, automatic download, fixed source, or inferred license acceptance. Local child processes receive only a minimal runtime/GPU environment allowlist.
-- Added bounded data-minimized requests requiring selected stable note IDs or an explicit measure range. The UI shows exact project/request JSON; cloud sends require a fresh checkbox approval invalidated by any scope/configuration/project change.
-- Added strict schema-v1 response parsing with unknown-field/operation rejection, stable-note/part/range validation, no code/path operation, stale-revision rejection, and content-free metadata logging.
-- Added deterministic application mappings for transpose, tempo, meter, key, quantize, low-confidence deletion, instrument profile, rhythm simplification, piano-hand split, and explanation-only responses.
-- Added immutable command preview, deterministic diff, destructive labeling, explicit confirmation for every mutation, ordinary undo history, provider failure isolation, and off-GUI-thread provider calls.
+- Added explicit Qwen 4B-class GGUF guidance without bundled weights, automatic download, fixed source, or inferred license acceptance.
+- Added bounded data-minimized requests, exact request preview, fresh cloud approval, strict response validation, deterministic edit plans, explicit confirmation, undo, failure isolation, and off-GUI-thread provider calls.
 - Added model-free unit and Qt workflow coverage plus assistant privacy documentation and ADR 0017.
 
 ## Phase 7 acceptance matrix
@@ -45,16 +67,9 @@ Phase 5 real MuScriptor Small acceptance passed and PR #6 merged as `cb85b7eae8f
 
 ## Completed in Phase 6
 
-- Added deterministic continuity-aware piano-hand assignment and per-staff non-overlap voice allocation. Staff and voice remain command-editable, so a user can override and undo every heuristic placement.
-- Added explicit rhythm simplification profiles, refined straight/triplet grids, persistent 3:2 triplet markers, and MusicXML `<time-modification>` output.
-- Added explicit General MIDI percussion mapping with unpitched score values, percussion clef/noteheads/instrument IDs, MusicXML `<unpitched>` and `midi-unpitched`, while MIDI retains sounding drum/channel semantics.
-- Added conservative exact-template chord suggestions labeled `suggested` with confidence, MusicXML `<harmony>`, persistence, manual add/edit/delete, refresh that preserves manual symbols, and command-stack undo/redo.
-- Added written/sounding instrument-range diagnostics that inspect the current score without clamping, transposing, deleting, or relocating notes; editing diagnostics are surfaced in the GUI.
-- Added exact tempo-map beat/second conversion and one transport position stream for waveform, raw piano roll, editable roll, compact score, and Verovio active-note highlighting. The compact score supports click-to-seek.
-- Added an application `PreviewSynthesizer` port, dependency-light deterministic 8 kHz PCM pulse adapter, coalescing Qt background client, per-request atomic artifacts, stale-result rejection, and dual source/preview Qt Multimedia playback.
-- Added cached stable score order/measure count and one-pass indexes for measure spans, voice/staff lookup, harmony measures, and preview pulse waveforms.
-- Added a reproducible 1k/10k score benchmark, selected hardware baseline, and a 1.25x same-machine regression gate that refuses cross-machine guarantees.
-- Updated MusicXML XSD coverage for pitched, transposing, percussion, harmony, and triplet fixtures; added ADR 0016 and Phase 6 architecture/testing/release documentation.
+- Added deterministic continuity-aware piano-hand assignment, per-staff non-overlap voice allocation, explicit rhythm profiles, persistent triplets, General MIDI percussion semantics, and conservative reviewable chord suggestions.
+- Added written/sounding range diagnostics, exact tempo-map beat/second conversion, synchronized waveform/piano-roll/score position, and dependency-light deterministic preview synthesis.
+- Added stable score indexes, reproducible 1k/10k benchmarks, W3C MusicXML coverage, ADR 0016, and related architecture/testing/release documentation.
 
 ## Phase 6 acceptance matrix
 
@@ -83,27 +98,32 @@ Phase 5 real MuScriptor Small acceptance passed and PR #6 merged as `cb85b7eae8f
 
 | Command | Result |
 |---|---|
-| `uv lock --check` | Passed: 142 packages resolved |
-| `ruff format --check .` | Passed: 178 files formatted |
+| `uv lock --check` | Passed: 147 packages resolved |
+| `ruff format --check .` | Passed: 190 files formatted |
 | `ruff check .` | Passed |
-| `mypy src/timbrescribe` | Passed: 126 source files, strict mode |
-| `pytest -m "not model and not packaging"` | Passed: 214 tests, 2 opt-in model tests deselected, 77.07% branch-aware coverage |
+| `mypy src/timbrescribe` | Passed: 131 source files, strict mode |
+| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 225 tests, 6 deselected, 77.15% branch-aware coverage |
+| Packaged artifact suite | Passed: 4 tests against frozen GUI/Workers, artifact-wide hashes/notices, one ONNX model |
+| Inno installed lifecycle | Passed: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
 | `benchmarks/score_pipeline.py --notes 1000 --runs 3` | Passed: 0.201 s median score-to-MusicXML, 0.299 s preview, 49.3 MiB peak working set |
 | `benchmarks/score_pipeline.py --notes 10000 --runs 3` | Passed: 2.100 s median score-to-MusicXML, 2.816 s preview, 114.2 MiB peak working set |
 | 10k `--compare` at `--max-regression-ratio 1.25` | Passed: every timing ratio 1.0046–1.0117; no regressed metrics |
-| `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked default environment |
-| `uv build --wheel` and content audit | Passed: `timbrescribe-0.8.0-py3-none-any.whl`, 136 files, assistant manifest present, no weights/ONNX/native executables; SHA-256 `71678c380372e3c98eedc8c8d00621fdcf2f142e5f03eb3d0e243f09c1628289` |
-| Gated real MuScriptor Small test | Passed in 20.70 s: exact revision/hash, `torch==2.13.0+cu126`, 3 labels, 3 score parts; aggregate evidence in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md` |
+| `pip-audit --skip-editable` | Passed: no known vulnerabilities in the locked release environment |
+| `uv build --wheel` and content audit | Passed: `timbrescribe-0.9.0-py3-none-any.whl`, 141 files, no model/native executables; SHA-256 `3334ccc0afdf0878e797e2b80d07dc7711e546b835460e9a007b1c0cb797f1c3` |
+| Phase 8 release benchmark | GUI 1.374 s, Mock 0.513 s, Basic Pitch preload 2.134 s medians; onedir 1,065.105 MiB, installer 263.201 MiB |
+| Gated real MuScriptor Small test | Passed; final propagated CUDA rerun completed in 15.42 s. Recorded acceptance: exact revision/hash, `torch==2.13.0+cu126`, 3 labels, 3 score parts; aggregate evidence in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md` |
 
 ## In progress
 
-- Phase 7 implementation and model-free acceptance are complete; updated branch quality/CI and PR #8 merge remain.
-- Phase 8 release hardening is implemented on its stacked branch and must not merge before Phase 7.
+- Phase 8 final propagated branch quality, GitHub Actions, review, and PR #9 merge.
+- Final v1 operational acceptance remains pending pristine no-Python Windows 10/11 and manual Narrator/DPI release-candidate runs, plus explicit authorization for signing/publication.
 
 ## Known issues / blockers
 
-- Phase 7 must complete updated branch quality/CI and PR #8 merge before Phase 8 can merge.
+- A pristine Windows 10 and Windows 11 x64 environment with no Python is not available in the current workspace; the exact installer matrix and GitHub workflow are implemented but cannot be represented as run on those two client VMs.
+- Manual Narrator and 100/150/200% display-scale acceptance remains pending.
+- Code signing and public release/hash publication have not been authorized; locally built candidates are explicitly unsigned and remain under `work/`.
 - MuseScore is not installed on this machine, so external release-MuseScore round-trip acceptance remains pending even though availability gating is tested.
 - The fallback preview is intentionally a timing-review pulse instrument, not production orchestration. A FluidSynth/SoundFont adapter remains optional pending explicit license and redistribution review.
 - Tempo, key, and chord analysis are reviewable suggestions rather than authoritative automatic analysis.
@@ -111,7 +131,7 @@ Phase 5 real MuScriptor Small acceptance passed and PR #6 merged as `cb85b7eae8f
 
 ## Next recommended task
 
-Run the complete Phase 7 quality gates, push the accepted stack update to PR #8, complete Windows CI/review, and merge Phase 7 before propagating into Phase 8.
+Validate and merge Phase 8 through PR #9, then rebuild from clean `main` and run the pristine Win10/11 and manual accessibility release-candidate matrix before any authorized signing or publication.
 
 ## Last updated date
 

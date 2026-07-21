@@ -22,6 +22,8 @@ class ScorePreviewWidget(QWidget):
         self._playhead_beat = Fraction(0)
         self.setMinimumSize(560, 300)
         self.setObjectName("scorePreview")
+        self.setAccessibleName(self.tr("Compact score preview"))
+        self.setAccessibleDescription(self.tr("Keyboard focus shows the current score preview."))
 
     @property
     def score(self) -> ScoreDocument | None:

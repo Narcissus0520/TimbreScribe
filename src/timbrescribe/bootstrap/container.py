@@ -73,6 +73,7 @@ def build_main_window(paths: AppPaths | None = None) -> MainWindow:
         availability,
         muscriptor_catalog.engine,
         musescore,
+        app_paths,
     )
     renderer = VerovioRenderer()
     notation_service = NotationService(

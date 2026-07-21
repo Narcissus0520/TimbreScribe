@@ -32,4 +32,20 @@ def configure_logging(log_directory: Path) -> Path:
         for existing in root.handlers
     ):
         root.addHandler(handler)
+    else:
+        handler.close()
     return log_path
+
+
+def close_logging(log_directory: Path) -> None:
+    """Close only rotating handlers owned by one application-data directory."""
+
+    resolved_directory = log_directory.resolve()
+    root = logging.getLogger()
+    for handler in tuple(root.handlers):
+        filename = getattr(handler, "baseFilename", None)
+        if filename is None:
+            continue
+        if Path(str(filename)).resolve().parent == resolved_directory:
+            root.removeHandler(handler)
+            handler.close()

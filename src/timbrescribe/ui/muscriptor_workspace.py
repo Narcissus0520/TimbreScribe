@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -127,17 +128,27 @@ class MuscriptorWorkspace(QWidget):
         self.cancel_button = QPushButton(self.tr("Cancel and preserve current project"), self)
         self.cancel_button.setEnabled(False)
 
+        body = QWidget(self)
+        body.setObjectName("muscriptorScrollBody")
+        body_layout = QVBoxLayout(body)
+        body_layout.addWidget(self.experimental_notice)
+        body_layout.addWidget(self.terms_link)
+        body_layout.addWidget(self.status_label)
+        body_layout.addWidget(self.resource_label)
+        body_layout.addWidget(model_box)
+        body_layout.addWidget(conditioning_box)
+        body_layout.addWidget(self.rights_confirmed)
+        body_layout.addWidget(self.run_button)
+        body_layout.addWidget(self.cancel_button)
+        body_layout.addStretch(1)
+
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setObjectName("muscriptorScrollArea")
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(body)
         layout = QVBoxLayout(self)
-        layout.addWidget(self.experimental_notice)
-        layout.addWidget(self.terms_link)
-        layout.addWidget(self.status_label)
-        layout.addWidget(self.resource_label)
-        layout.addWidget(model_box)
-        layout.addWidget(conditioning_box)
-        layout.addWidget(self.rights_confirmed)
-        layout.addWidget(self.run_button)
-        layout.addWidget(self.cancel_button)
-        layout.addStretch(1)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.scroll_area)
         self._connect_signals()
 
     @property

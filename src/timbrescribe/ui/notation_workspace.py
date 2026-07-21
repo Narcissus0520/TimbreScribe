@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -102,11 +103,21 @@ class NotationWorkspace(QWidget):
         form.addRow(self.merge_repeated)
         form.addRow(self.preserve_grace)
         form.addRow(self.tr("Confidence filter"), self.confidence)
+        body = QWidget(self)
+        body.setObjectName("notationScrollBody")
+        body_layout = QVBoxLayout(body)
+        body_layout.addWidget(self.suggestion_label)
+        body_layout.addLayout(form)
+        body_layout.addWidget(self.generate_button)
+        body_layout.addStretch(1)
+
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setObjectName("notationScrollArea")
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setWidget(body)
         layout = QVBoxLayout(self)
-        layout.addWidget(self.suggestion_label)
-        layout.addLayout(form)
-        layout.addWidget(self.generate_button)
-        layout.addStretch(1)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.scroll_area)
         self.generate_button.clicked.connect(self.notation_requested)
 
     @property

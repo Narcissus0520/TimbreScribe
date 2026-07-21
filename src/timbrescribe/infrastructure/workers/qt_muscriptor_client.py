@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 from typing import Literal
 
@@ -13,6 +12,7 @@ from timbrescribe.domain.engines import ModelManifest
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
 from timbrescribe.infrastructure.muscriptor import MuscriptorModelManager
 from timbrescribe.infrastructure.paths import AppPaths
+from timbrescribe.infrastructure.process_launch import module_process_command
 from timbrescribe.infrastructure.workers.artifact_loader import load_transcription_artifact
 from timbrescribe.shared.protocol import (
     CancelCommand,
@@ -151,8 +151,9 @@ class QtMuscriptorWorkerClient(QObject):
         environment.remove("HF_TOKEN")
         environment.remove("HUGGING_FACE_HUB_TOKEN")
         process.setProcessEnvironment(environment)
-        process.setProgram(sys.executable)
-        process.setArguments(["-m", self._worker_module])
+        program, arguments = module_process_command(self._worker_module)
+        process.setProgram(program)
+        process.setArguments(arguments)
         process.readyReadStandardOutput.connect(self._read_stdout)
         process.readyReadStandardError.connect(self._read_stderr)
         process.finished.connect(self._process_finished)

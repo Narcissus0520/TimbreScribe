@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QDockWidget, QScrollArea, QTabWidget
 from pytestqt.qtbot import QtBot
 
 from timbrescribe.ui import MainWindow
+from timbrescribe.ui.about_dialog import AboutDialog
 
 
 def _run_success(window: MainWindow, qtbot: QtBot) -> None:
@@ -24,6 +27,37 @@ def test_launch_and_successful_visible_score(main_window: MainWindow, qtbot: QtB
     assert main_window.musicxml_preview.toPlainText().startswith("<?xml")
     assert main_window.export_musicxml_action.isEnabled()
     assert main_window.export_midi_action.isEnabled()
+
+
+def test_default_docks_and_muscriptor_controls_are_reachable(
+    main_window: MainWindow,
+    qtbot: QtBot,
+) -> None:
+    qtbot.waitUntil(lambda: main_window.width() > 0)
+    left_dock = main_window.findChild(QDockWidget, "sourceMediaDock")
+    right_dock = main_window.findChild(QDockWidget, "scoreInspectorDock")
+    diagnostics_dock = main_window.findChild(QDockWidget, "diagnosticsDock")
+    muscriptor_scroll = main_window.muscriptor_workspace.findChild(
+        QScrollArea, "muscriptorScrollArea"
+    )
+    notation_scroll = main_window.notation_workspace.findChild(QScrollArea, "notationScrollArea")
+    show_muscriptor = main_window.findChild(QAction, "show_muscriptor_dock_action")
+
+    assert left_dock is not None
+    assert right_dock is not None
+    assert diagnostics_dock is not None
+    assert muscriptor_scroll is not None
+    assert notation_scroll is not None
+    assert show_muscriptor is not None
+    assert muscriptor_scroll.widgetResizable()
+    assert notation_scroll.widgetResizable()
+    assert left_dock.width() >= 280
+    assert right_dock.width() >= 180
+    assert diagnostics_dock.height() >= 110
+    assert main_window.media_workspace.isVisible()
+
+    show_muscriptor.trigger()
+    qtbot.waitUntil(main_window.muscriptor_workspace.isVisible)
 
 
 def test_gui_exports_unicode_paths(main_window: MainWindow, qtbot: QtBot, tmp_path: Path) -> None:
@@ -96,3 +130,21 @@ def test_cooperative_cancel_returns_ui_to_idle(main_window: MainWindow, qtbot: Q
 
     assert "已取消" in main_window.diagnostics.toPlainText()
     assert not main_window.cancel_action.isEnabled()
+
+
+def test_about_licenses_and_light_theme_are_reachable(
+    main_window: MainWindow,
+    qtbot: QtBot,
+) -> None:
+    main_window.about_action.trigger()
+    qtbot.waitUntil(lambda: main_window.findChild(AboutDialog) is not None)
+    dialog = main_window.findChild(AboutDialog)
+    assert dialog is not None
+    tabs = dialog.findChild(QTabWidget)
+    assert tabs is not None
+    assert tabs.count() == 6
+
+    original_theme = main_window.light_theme_action.isChecked()
+    main_window.light_theme_action.setChecked(not original_theme)
+    assert main_window.light_theme_action.isChecked() is not original_theme
+    main_window.light_theme_action.setChecked(original_theme)

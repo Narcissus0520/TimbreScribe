@@ -277,4 +277,33 @@ The professional view uses pinned local Verovio 6.2.1 through its Python toolkit
 
 ## Deferred architecture
 
-Packaging and full artifact-specific license manifests remain deferred to Phase 8. Higher-quality FluidSynth/SoundFont preview remains optional until license and redistribution review. A particular local GGUF remains user-supplied until its exact provenance, license, size, and redistribution terms are accepted for distribution. Future MuScriptor revisions remain gated on explicit terms acceptance, credential-backed verified weights, and approved local test material; the pinned Small revision's aggregate real-inference evidence is recorded in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md`.
+Higher-quality FluidSynth/SoundFont preview remains optional until license and redistribution review. A particular local GGUF remains user-supplied until its exact provenance, license, size, and redistribution terms are accepted for distribution. Future MuScriptor revisions remain gated on explicit terms acceptance, credential-backed verified weights, and approved local test material; the pinned Small revision's aggregate real-inference evidence is recorded in `docs/benchmarks/PHASE_5_MUSCRIPTOR_ACCEPTANCE.md`.
+
+## Phase 8 release architecture
+
+```text
+locked Python 3.11 + uv.lock + verified Basic Pitch ONNX
+  + pinned PyInstaller spec + source commit epoch
+  -> one Analysis/PYZ
+       -> TimbreScribe.exe (windowed GUI / file association target)
+       -> TimbreScribeWorker.exe (console JSONL helper; approved worker IDs only)
+  -> onedir _internal (dynamic Qt/PySide, Verovio, ONNX CPU dependencies)
+  + verified replaceable FFmpeg shared directory
+  + project/third-party/model/privacy notices
+  + generated dependency inventory and per-file SHA-256 provenance
+  -> deterministic ZIP
+  -> per-user Inno Setup installer + installer provenance
+  -> installed GUI/Mock/Basic Pitch/association/upgrade/uninstall smoke
+```
+
+Source runs use `sys.executable -m <approved worker module>`. Frozen runs map the same fixed module
+allowlist to `TimbreScribeWorker.exe --worker <id>`; arbitrary modules cannot cross this boundary.
+Neither path builds a shell string. One packaged ONNX model is allowed by exact hash. Gated
+MuScriptor weights, assistant models, credentials, source media, projects, caches, and local settings
+remain outside the artifact.
+
+Runtime program files live under the per-user installation directory. Mutable data remains under
+the injected `AppPaths` root, normally Local AppData. Diagnostics export includes only bounded
+environment metadata and redacted recent logs. Crash handling writes a bounded redacted record.
+Managed cleanup verifies cache/log targets are descendants of the application-data root and never
+touches models, projects, settings, recovery, or credentials. See ADR 0018.

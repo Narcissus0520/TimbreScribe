@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QTimer, Signal
 
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
 from timbrescribe.infrastructure.paths import AppPaths
+from timbrescribe.infrastructure.process_launch import module_process_command
 from timbrescribe.infrastructure.workers.artifact_loader import load_transcription_artifact
 from timbrescribe.shared.protocol import (
     CancelCommand,
@@ -82,8 +82,9 @@ class QtMockWorkerClient(QObject):
         environment.insert("PYTHONUNBUFFERED", "1")
         environment.insert("PYTHONUTF8", "1")
         process.setProcessEnvironment(environment)
-        process.setProgram(sys.executable)
-        process.setArguments(["-m", "timbrescribe.workers.mock"])
+        program, arguments = module_process_command("timbrescribe.workers.mock")
+        process.setProgram(program)
+        process.setArguments(arguments)
         process.readyReadStandardOutput.connect(self._read_stdout)
         process.readyReadStandardError.connect(self._read_stderr)
         process.finished.connect(self._process_finished)
