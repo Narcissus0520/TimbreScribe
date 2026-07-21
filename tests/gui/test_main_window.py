@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QDockWidget, QScrollArea, QTabWidget
+from PySide6.QtWidgets import QDockWidget, QScrollArea, QTabBar, QTabWidget
 from pytestqt.qtbot import QtBot
 
 from timbrescribe.ui import MainWindow
@@ -41,6 +42,7 @@ def test_default_docks_and_muscriptor_controls_are_reachable(
         QScrollArea, "muscriptorScrollArea"
     )
     notation_scroll = main_window.notation_workspace.findChild(QScrollArea, "notationScrollArea")
+    workspace_tabs = main_window.findChild(QTabBar, "workspaceDockTabBar")
     show_muscriptor = main_window.findChild(QAction, "show_muscriptor_dock_action")
 
     assert left_dock is not None
@@ -48,13 +50,30 @@ def test_default_docks_and_muscriptor_controls_are_reachable(
     assert diagnostics_dock is not None
     assert muscriptor_scroll is not None
     assert notation_scroll is not None
+    assert workspace_tabs is not None
     assert show_muscriptor is not None
     assert muscriptor_scroll.widgetResizable()
     assert notation_scroll.widgetResizable()
-    assert left_dock.width() >= 280
+    assert left_dock.width() >= 400
     assert right_dock.width() >= 180
     assert diagnostics_dock.height() >= 110
     assert main_window.media_workspace.isVisible()
+    assert (
+        main_window.tabPosition(Qt.DockWidgetArea.LeftDockWidgetArea)
+        == QTabWidget.TabPosition.North
+    )
+    assert {workspace_tabs.tabText(index) for index in range(workspace_tabs.count())} == {
+        "媒体",
+        "Mock",
+        "Basic",
+        "MuScriptor",
+        "乐谱",
+    }
+    assert all(workspace_tabs.tabToolTip(index) for index in range(workspace_tabs.count()))
+    assert (
+        sum(workspace_tabs.tabSizeHint(index).width() for index in range(workspace_tabs.count()))
+        <= workspace_tabs.width()
+    )
 
     show_muscriptor.trigger()
     qtbot.waitUntil(main_window.muscriptor_workspace.isVisible)
