@@ -208,6 +208,26 @@ The fallback synthesizer is intentionally a timing-review instrument rather than
 
 Long-score consumers use cached stable score order/measure count and one-pass measure, voice/staff, harmony, and pulse indexes. The reproducible 1k/10k benchmark records same-machine timing and memory. Its 25% comparison gate is not applied across different hardware or note counts.
 
+## Phase 7 optional assistant flow
+
+```text
+explicit stable-note selection or measure range + user instruction
+  -> AssistantService bounded symbolic context (maximum 256 notes)
+  -> exact project/request JSON preview
+  -> local provider, or fresh per-request cloud approval
+  -> background AssistantProvider.generate_command(request)
+  -> strict schema-v1 discriminated command envelope
+  -> operation / field / stable-ID / part / range validation
+  -> deterministic application command on an immutable preview snapshot
+  -> visible diff and destructive-change label
+  -> explicit confirmation
+  -> ordinary editing command history + undo
+```
+
+`AssistantProvider` contains only `descriptor()` and `generate_command()`. Infrastructure owns optional lifecycle details. The local adapter starts a user-selected `llama-server.exe` without a shell, passes only a minimal runtime/GPU environment allowlist, listens only on `127.0.0.1`, and uses a user-selected GGUF. The generic cloud adapter accepts only a credential-free HTTPS URL and a user-selected model ID; BYOK secrets are namespaced by endpoint in the operating-system credential service.
+
+Neither adapter receives source media, archives, paths, credentials, or implicit full-score content. The UI displays the exact project/request JSON, and cloud approval is cleared whenever scope, instruction, configuration, selection, or project revision changes. A fixed public schema/system prompt contains no project data. Provider failures and invalid/stale responses cannot enter the editing session. See ADR 0017 and `ASSISTANT_PRIVACY.md`.
+
 ## Data ownership
 
 - `RawNoteEvent` is immutable source evidence and retains engine/model provenance.
@@ -219,6 +239,7 @@ Long-score consumers use cached stable score order/measure count and one-pass me
 - `MuscriptorSettingsSnapshot` records model variant, device, conditioning, accepted terms version, and per-run source-rights confirmation without a credential.
 - Engine labels are immutable raw evidence; part instrument profiles are user-editable derived score state.
 - MusicXML and MIDI are derived artifacts from one score snapshot.
+- `AssistantRequest` is an ephemeral minimized projection, never project state; provider output remains untrusted until deterministic planning and explicit confirmation.
 
 ## Rendering decision
 
@@ -248,7 +269,12 @@ The professional view uses pinned local Verovio 6.2.1 through its Python toolkit
 - Tokens are accepted only in Hugging Face token form, stored through the OS credential service, passed only in the installer environment, and redacted from diagnostics.
 - MuScriptor installation accepts only pinned safetensors/config files, verifies size/hash/config, removes cache metadata, and atomically promotes a managed directory.
 - MuScriptor crash, cancellation, protocol failure, and out-of-memory leave the active project and verified model state unchanged.
+- The assistant is disabled by default; it refuses implicit full-score scope and runs provider calls outside the GUI thread.
+- Cloud assistant endpoints must use credential-free HTTPS URLs; API keys stay in the OS credential service and fresh data-scope approval is required for every request.
+- Local llama-server uses a loopback listener, argument arrays, no shell, user-supplied GGUF weights, and a credential-scrubbed child environment.
+- Assistant responses are strict schema-v1 data. Unknown operations, code, paths, fields, IDs, or out-of-preview ranges are rejected before any project mutation.
+- Every assistant mutation is first applied to an immutable preview snapshot, shown as a deterministic diff, explicitly confirmed, and recorded as an undoable edit command.
 
 ## Deferred architecture
 
-Assistant providers, packaging, and full artifact-specific license manifests remain deferred to their ordered milestones. Higher-quality FluidSynth/SoundFont preview remains optional until license and redistribution review. Real MuScriptor Small inference acceptance remains gated on explicit user terms acceptance, credential-backed verified weights, and approved local test material.
+Packaging and full artifact-specific license manifests remain deferred to Phase 8. Higher-quality FluidSynth/SoundFont preview remains optional until license and redistribution review. A particular local GGUF remains user-supplied until its exact provenance, license, size, and redistribution terms are accepted for distribution. Real MuScriptor Small inference acceptance remains gated on explicit user terms acceptance, credential-backed verified weights, and approved local test material.

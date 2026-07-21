@@ -43,6 +43,10 @@ class AppPaths:
         return self.root / "settings.json"
 
     @property
+    def assistant_settings_file(self) -> Path:
+        return self.root / "assistant-settings.json"
+
+    @property
     def score_preview_midi(self) -> Path:
         return self.cache / "playback" / "current.mid"
 

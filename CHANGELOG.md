@@ -6,6 +6,10 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Added
 
+- Opt-in Phase 7 score assistant with a two-method provider port, local loopback llama.cpp lifecycle, generic OpenAI-compatible HTTPS BYOK adapter, and OS credential storage.
+- Exact minimized request preview, per-request cloud privacy approval, strict versioned command schema, stable-ID/range validation, deterministic diffs, destructive warnings, and explicit confirmation before undoable edits.
+- Assistant commands for transpose, tempo, meter, key, quantization, low-confidence deletion, instrument changes, rhythm simplification, deterministic piano-hand splitting, and non-mutating theory explanations.
+- User-supplied Qwen 4B-class GGUF manifest with no bundled/downloaded weights, non-secret provider settings, sanitized local subprocess environment, and model-free GUI/contract coverage.
 - Deterministic Phase 6 refinement with continuity-aware piano-hand/voice allocation, explicit triplets, named rhythm profiles, non-mutating instrument-range diagnostics, and manual staff/voice correction.
 - MusicXML percussion `<unpitched>`/instrument semantics, conservative labeled chord suggestions, and undoable manual chord set/delete/refresh workflows.
 - Application-level `PreviewSynthesizer` port, coalesced background 8 kHz PCM fallback synthesis, dual source/preview Qt playback, exact tempo-map conversion, and synchronized waveform/roll/score/Verovio playheads.
@@ -57,6 +61,10 @@ All notable changes to TimbreScribe will be documented in this file. The project
 - Forced UTF-8 on Mock worker standard streams so JSONL paths remain valid on Windows systems using non-UTF-8 console code pages.
 - Bridged Qt Multimedia 64-bit time signals explicitly for reliable PySide6 signal delivery.
 - Prevented successful FFmpeg exits without an artifact and process-start errors from promoting invalid cache entries.
+
+## [0.8.0] - Unreleased
+
+Phase 7 adds a disabled-by-default, privacy-reviewed local/cloud score assistant whose untrusted output can only become a deterministic, explicitly confirmed, undoable edit.
 
 ## [0.7.0] - Unreleased
 
