@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from PySide6.QtCore import QCoreApplication, Qt
+from PySide6.QtCore import QCoreApplication, QSettings, Qt
 from PySide6.QtGui import QAction, QCloseEvent, QKeySequence
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDockWidget,
     QFileDialog,
@@ -30,8 +31,15 @@ from timbrescribe.domain.errors import TimbreScribeError
 from timbrescribe.domain.score import beat_to_seconds, seconds_to_beat
 from timbrescribe.domain.transcription import RawTranscription
 from timbrescribe.infrastructure.basic_pitch import BasicPitchAvailability
+from timbrescribe.infrastructure.diagnostics import (
+    DiagnosticsExporter,
+    clear_managed_cache_and_logs,
+)
+from timbrescribe.infrastructure.logging_config import configure_logging
 from timbrescribe.infrastructure.musescore import MuseScoreAvailability, open_in_musescore
+from timbrescribe.infrastructure.paths import AppPaths
 from timbrescribe.infrastructure.workers.qt_mock_client import QtMockWorkerClient
+from timbrescribe.ui.about_dialog import AboutDialog
 from timbrescribe.ui.assistant_workspace import AssistantWorkspace
 from timbrescribe.ui.basic_pitch_workspace import BasicPitchWorkspace
 from timbrescribe.ui.editing_workspace import EditingWorkspace
@@ -40,6 +48,7 @@ from timbrescribe.ui.muscriptor_workspace import MuscriptorWorkspace
 from timbrescribe.ui.notation_workspace import NotationWorkspace
 from timbrescribe.ui.piano_roll import PianoRollWidget
 from timbrescribe.ui.score_preview import ScorePreviewWidget
+from timbrescribe.ui.theme import apply_theme
 from timbrescribe.ui.verovio_view import VerovioScoreView
 from timbrescribe.ui.waveform import WaveformWidget
 
@@ -68,6 +77,7 @@ class MainWindow(QMainWindow):
         basic_pitch_availability: BasicPitchAvailability,
         muscriptor_descriptor: EngineDescriptor,
         musescore_availability: MuseScoreAvailability,
+        app_paths: AppPaths,
     ) -> None:
         super().__init__()
         self._service = service
@@ -85,6 +95,9 @@ class MainWindow(QMainWindow):
         self._mock_start_token: ProjectVersionToken | None = None
         self._mock_started_without_project = True
         self._musescore_availability = musescore_availability
+        self._app_paths = app_paths
+        self._diagnostics_exporter = DiagnosticsExporter(app_paths)
+        self._about_dialog: AboutDialog | None = None
 
         self._base_window_title = _tr("TimbreScribe · 谱迹 — Basic Pitch + Mock/Test")
         self.setWindowTitle(self._base_window_title)
@@ -133,18 +146,28 @@ class MainWindow(QMainWindow):
         self.export_pdf_action = QAction(_tr("导出矢量 PDF"), self)
         self.open_musescore_action = QAction(_tr("在 MuseScore 中打开"), self)
         self.open_musescore_action.setToolTip(musescore_availability.diagnostic)
+        self.export_diagnostics_action = QAction(_tr("Export diagnostics…"), self)
+        self.clear_cache_logs_action = QAction(_tr("Clear managed cache and logs…"), self)
+        self.light_theme_action = QAction(_tr("Use light theme"), self)
+        self.light_theme_action.setCheckable(True)
+        self.light_theme_action.setChecked(
+            str(QSettings().value("appearance/theme", "dark")) == "light"
+        )
+        self.about_action = QAction(_tr("About and licenses"), self)
         self._set_advanced_exports_enabled(False)
 
         self.score_preview = ScorePreviewWidget(self)
         self.verovio_view = VerovioScoreView(parent=self)
         self.musicxml_preview = QPlainTextEdit(self)
         self.musicxml_preview.setReadOnly(True)
+        self.musicxml_preview.setAccessibleName(_tr("Generated MusicXML source preview"))
         self.musicxml_preview.setPlaceholderText(_tr("生成后的 MusicXML 4.0 将显示在这里。"))
         self.waveform_view = WaveformWidget(self)
         self.piano_roll_view = PianoRollWidget(self)
         self.editing_workspace = EditingWorkspace(self)
         self.assistant_workspace = AssistantWorkspace(self)
         self.tabs = QTabWidget(self)
+        self.tabs.setAccessibleName(_tr("TimbreScribe workspaces"))
         self.verovio_tab_index = self.tabs.addTab(self.verovio_view, _tr("Verovio 乐谱"))
         self.tabs.addTab(self.score_preview, _tr("乐谱"))
         self.tabs.addTab(self.musicxml_preview, _tr("MusicXML"))
@@ -172,9 +195,11 @@ class MainWindow(QMainWindow):
         self.notation_workspace = NotationWorkspace(self)
 
         self.scenario_combo = QComboBox(self)
+        self.scenario_combo.setAccessibleName(_tr("Mock transcription scenario"))
         self.scenario_combo.addItem(_tr("单旋律"), "monophonic")
         self.scenario_combo.addItem(_tr("和弦/复音"), "polyphonic")
         self.simulation_combo = QComboBox(self)
+        self.simulation_combo.setAccessibleName(_tr("Mock worker result simulation"))
         self.simulation_combo.addItem(_tr("成功"), "success")
         self.simulation_combo.addItem(_tr("成功并警告"), "warning")
         self.simulation_combo.addItem(_tr("模拟失败"), "failure")
@@ -183,8 +208,10 @@ class MainWindow(QMainWindow):
         self.inspector_label.setWordWrap(True)
         self.diagnostics = QPlainTextEdit(self)
         self.diagnostics.setReadOnly(True)
+        self.diagnostics.setAccessibleName(_tr("Job and diagnostic messages"))
         self.diagnostics.setMaximumBlockCount(500)
         self.progress_bar = QProgressBar(self)
+        self.progress_bar.setAccessibleName(_tr("Current job progress"))
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setMaximumWidth(240)
@@ -437,6 +464,8 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.save_project_as_action)
         file_menu.addSeparator()
         file_menu.addAction(self.import_media_action)
+        file_menu.addAction(self.export_diagnostics_action)
+        file_menu.addAction(self.clear_cache_logs_action)
         edit_menu = self.menuBar().addMenu(_tr("编辑"))
         edit_menu.addAction(self.undo_action)
         edit_menu.addAction(self.redo_action)
@@ -453,6 +482,14 @@ class MainWindow(QMainWindow):
             self.open_musescore_action,
         ):
             export_menu.addAction(action)
+        view_menu = self.menuBar().addMenu(_tr("View"))
+        view_menu.addAction(self.light_theme_action)
+        help_menu = self.menuBar().addMenu(_tr("Help"))
+        help_menu.addAction(self.about_action)
+        self.export_diagnostics_action.triggered.connect(self._choose_diagnostics_destination)
+        self.clear_cache_logs_action.triggered.connect(self._clear_cache_and_logs)
+        self.light_theme_action.toggled.connect(self._set_light_theme)
+        self.about_action.triggered.connect(self._show_about)
         self._worker.progress.connect(self._on_progress)
         self._worker.warning.connect(self._on_warning)
         self._worker.completed.connect(self._on_completed)
@@ -747,6 +784,83 @@ class MainWindow(QMainWindow):
         )
         if filename:
             controller.open_async(Path(filename))
+
+    def open_project(self, source: Path) -> None:
+        """Open a file-association target through the normal validated loader."""
+
+        controller = self._editing_controller
+        if controller is None:
+            return
+        if source.suffix.casefold() != ".timbrescribe" or not source.is_file():
+            self._show_error(
+                _tr("Cannot open project"),
+                _tr("The file-association target is not an existing .timbrescribe project."),
+                _tr("Choose a valid project from File > Open Project."),
+            )
+            return
+        controller.open_async(source)
+
+    def _choose_diagnostics_destination(self) -> None:
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            _tr("Export redacted diagnostics"),
+            "TimbreScribe-diagnostics.zip",
+            _tr("ZIP archive (*.zip)"),
+        )
+        if not filename:
+            return
+        try:
+            exported = self._diagnostics_exporter.export(Path(filename))
+        except (OSError, ValueError) as exc:
+            self._show_error(
+                _tr("Diagnostics export failed"),
+                str(exc),
+                _tr("Choose another writable destination; the current project is unchanged."),
+            )
+            return
+        self.statusBar().showMessage(
+            _tr("Redacted diagnostics exported: {path}").format(path=exported),
+            8_000,
+        )
+
+    def _show_about(self) -> None:
+        dialog = AboutDialog(self)
+        self._about_dialog = dialog
+        dialog.finished.connect(lambda _result: setattr(self, "_about_dialog", None))
+        dialog.open()
+
+    def _set_light_theme(self, enabled: bool) -> None:
+        theme = "light" if enabled else "dark"
+        application = QApplication.instance()
+        if isinstance(application, QApplication):
+            apply_theme(application, theme)
+        QSettings().setValue("appearance/theme", theme)
+
+    def _clear_cache_and_logs(self) -> None:
+        response = QMessageBox.question(
+            self,
+            _tr("Clear managed cache and logs?"),
+            _tr(
+                "This removes only TimbreScribe cache and diagnostic logs. Projects, settings, "
+                "credentials, and installed models are preserved."
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if response != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            clear_managed_cache_and_logs(self._app_paths)
+            configure_logging(self._app_paths.logs)
+        except (OSError, ValueError) as exc:
+            self._show_error(
+                _tr("Managed cleanup failed"),
+                str(exc),
+                _tr("Close background jobs and retry; projects and models were not targeted."),
+            )
+            return
+        self.diagnostics.clear()
+        self.statusBar().showMessage(_tr("Managed cache and logs cleared."), 5_000)
 
     def _save_project(self) -> None:
         controller = self._editing_controller

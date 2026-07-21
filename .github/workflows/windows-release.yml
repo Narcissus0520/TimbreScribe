@@ -1,0 +1,75 @@
+name: Windows release candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  onedir-and-installer:
+    name: Build and smoke-test Windows x64 artifacts
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      PYTHONUTF8: "1"
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.29"
+          enable-cache: true
+
+      - name: Synchronize locked release environment
+        run: uv sync --frozen --group dev --group basic-pitch
+
+      - name: Install verified FFmpeg reference
+        shell: pwsh
+        run: ./tools/setup_ffmpeg.ps1 -Destination (Join-Path $env:RUNNER_TEMP "timbrescribe-ffmpeg")
+
+      - name: Build verified onedir and deterministic ZIP
+        shell: pwsh
+        run: ./packaging/scripts/build_onedir.ps1 -FfmpegDirectory $env:TIMBRESCRIBE_FFMPEG_DIR -Clean
+
+      - name: Run packaged GUI, Worker, license, and hash smoke tests
+        shell: pwsh
+        run: |
+          $env:TIMBRESCRIBE_PACKAGED_APP = Join-Path $PWD "work\release\dist\TimbreScribe"
+          uv run pytest -m packaging --no-cov
+
+      - name: Install pinned Inno Setup compiler
+        shell: pwsh
+        run: winget install --id JRSoftware.InnoSetup.7 --version 7.0.2 --exact --silent --scope user --accept-package-agreements --accept-source-agreements --disable-interactivity
+
+      - name: Compile installer and provenance
+        shell: pwsh
+        run: ./packaging/scripts/build_installer.ps1
+
+      - name: Test install, association, launch, preservation, and uninstall
+        shell: pwsh
+        run: ./packaging/scripts/test_installer.ps1 -Installer ./work/release/artifacts/TimbreScribe-0.9.0-windows-x64-setup.exe
+
+      - name: Upload unsigned release-candidate artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: TimbreScribe-0.9.0-windows-x64-unsigned
+          path: |
+            work/release/artifacts/TimbreScribe-0.9.0-windows-x64-onedir.zip
+            work/release/artifacts/TimbreScribe-0.9.0-windows-x64-setup.exe
+            work/release/artifacts/installer-manifest.json
+            work/release/dist/TimbreScribe/manifests/release-manifest.json
+          if-no-files-found: error
+          retention-days: 14

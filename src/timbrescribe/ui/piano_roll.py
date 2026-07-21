@@ -17,6 +17,7 @@ class PianoRollWidget(QWidget):
         self._notes: tuple[RawNoteEvent, ...] = ()
         self._playhead_seconds = 0.0
         self.setMinimumSize(420, 260)
+        self.setAccessibleName(self.tr("Raw transcription piano roll"))
         self.setToolTip(self.tr("横轴为物理时间（秒），纵轴为 MIDI 音高，颜色表示置信度。"))
 
     @property

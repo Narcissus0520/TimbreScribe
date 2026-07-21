@@ -52,6 +52,7 @@ class VerovioScoreView(QWidget):
         self._page_index = 0
         self._fit_mode = "width"
         self._highlighted_note_ids: tuple[str, ...] = ()
+        self.setAccessibleName(self.tr("Engraved score view"))
 
         self.web_view: QWebEngineView | QTextBrowser
         if os.environ.get("QT_QPA_PLATFORM") == "offscreen":

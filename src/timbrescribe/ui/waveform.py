@@ -16,6 +16,7 @@ class WaveformWidget(QWidget):
         self._playhead_ratio = 0.0
         self.setMinimumSize(520, 260)
         self.setObjectName("waveformView")
+        self.setAccessibleName(self.tr("Source waveform"))
 
     @property
     def sample_count(self) -> int:

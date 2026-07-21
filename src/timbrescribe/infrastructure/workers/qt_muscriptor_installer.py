@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 from uuid import uuid4
 
@@ -13,6 +12,7 @@ from timbrescribe.application.ports import CredentialStore
 from timbrescribe.domain.engines import ModelManifest
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
 from timbrescribe.infrastructure.muscriptor import MuscriptorModelManager
+from timbrescribe.infrastructure.process_launch import module_process_command
 from timbrescribe.shared.protocol import (
     ErrorMessage,
     HelloMessage,
@@ -86,11 +86,9 @@ class QtMuscriptorInstallerClient(QObject):
         environment.remove("HUGGING_FACE_HUB_TOKEN")
         environment.insert("HF_TOKEN", token)
         process.setProcessEnvironment(environment)
-        process.setProgram(sys.executable)
-        process.setArguments(
+        program, arguments = module_process_command(
+            "timbrescribe.workers.muscriptor_installer",
             [
-                "-m",
-                "timbrescribe.workers.muscriptor_installer",
                 "--job-id",
                 self._job_id,
                 "--variant",
@@ -99,8 +97,10 @@ class QtMuscriptorInstallerClient(QObject):
                 str(self._models.root),
                 "--acceptance-file",
                 str(self._acceptance_file),
-            ]
+            ],
         )
+        process.setProgram(program)
+        process.setArguments(arguments)
         process.readyReadStandardOutput.connect(self._read_stdout)
         process.readyReadStandardError.connect(self._read_stderr)
         process.finished.connect(self._process_finished)

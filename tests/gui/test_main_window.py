@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from PySide6.QtWidgets import QTabWidget
 from pytestqt.qtbot import QtBot
 
 from timbrescribe.ui import MainWindow
+from timbrescribe.ui.about_dialog import AboutDialog
 
 
 def _run_success(window: MainWindow, qtbot: QtBot) -> None:
@@ -96,3 +98,21 @@ def test_cooperative_cancel_returns_ui_to_idle(main_window: MainWindow, qtbot: Q
 
     assert "已取消" in main_window.diagnostics.toPlainText()
     assert not main_window.cancel_action.isEnabled()
+
+
+def test_about_licenses_and_light_theme_are_reachable(
+    main_window: MainWindow,
+    qtbot: QtBot,
+) -> None:
+    main_window.about_action.trigger()
+    qtbot.waitUntil(lambda: main_window.findChild(AboutDialog) is not None)
+    dialog = main_window.findChild(AboutDialog)
+    assert dialog is not None
+    tabs = dialog.findChild(QTabWidget)
+    assert tabs is not None
+    assert tabs.count() == 6
+
+    original_theme = main_window.light_theme_action.isChecked()
+    main_window.light_theme_action.setChecked(not original_theme)
+    assert main_window.light_theme_action.isChecked() is not original_theme
+    main_window.light_theme_action.setChecked(original_theme)
