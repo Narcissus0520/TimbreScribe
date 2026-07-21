@@ -6,7 +6,13 @@ from dataclasses import replace
 from fractions import Fraction
 
 from timbrescribe.domain.notation import NotationSettings
+from timbrescribe.domain.notation.percussion import map_percussion_note
 from timbrescribe.domain.notation.pipeline import spell_pitch
+from timbrescribe.domain.notation.quantization import (
+    effective_quantization_settings,
+    is_triplet_duration,
+    nearest_grid,
+)
 from timbrescribe.domain.project.models import EditedNoteEvent, EditingProject
 from timbrescribe.domain.score import (
     KeyEvent,
@@ -39,10 +45,34 @@ def derive_score(
             raise ValueError(f"Unknown target part: {event.part_id}") from exc
         if event.staff > part.staff_count:
             raise ValueError(f"Staff {event.staff} exceeds part {part.id} staff count")
-        start = _nearest_grid(event.onset_seconds * Fraction(notation.tempo_bpm, 60), notation)
-        end = _nearest_grid(event.offset_seconds * Fraction(notation.tempo_bpm, 60), notation)
-        duration = max(end - start, notation.quantization.minimum_duration)
+        quantization = effective_quantization_settings(notation.quantization)
+        start, _start_triplet = nearest_grid(
+            event.onset_seconds * Fraction(notation.tempo_bpm, 60), quantization
+        )
+        end, _end_triplet = nearest_grid(
+            event.offset_seconds * Fraction(notation.tempo_bpm, 60), quantization
+        )
+        duration = max(end - start, quantization.minimum_duration)
         profile = part.instrument_profile
+        if profile is not None and profile.percussion:
+            notes_by_part[event.part_id].append(
+                ScoreNote(
+                    id=event.id,
+                    source_note_ids=event.source_note_ids,
+                    part_id=event.part_id,
+                    staff=event.staff,
+                    voice=event.voice,
+                    written_pitch=None,
+                    sounding_pitch=event.sounding_pitch,
+                    start_beat=max(Fraction(0), start),
+                    duration_beats=duration,
+                    edited_by_user=event.edited_by_user,
+                    velocity=event.velocity,
+                    notations=(("triplet",) if is_triplet_duration(duration, quantization) else ()),
+                    percussion=map_percussion_note(event.sounding_pitch),
+                )
+            )
+            continue
         written_midi = event.sounding_pitch
         if profile is not None and not part.concert_pitch_view:
             written_midi = profile.sounding_to_written(event.sounding_pitch)
@@ -59,6 +89,7 @@ def derive_score(
                 duration_beats=duration,
                 edited_by_user=event.edited_by_user,
                 velocity=event.velocity,
+                notations=("triplet",) if is_triplet_duration(duration, quantization) else (),
             )
         )
     derived_parts = []
@@ -92,23 +123,8 @@ def derive_score(
             (MeterEvent(Fraction(0), notation.meter_beats, notation.meter_beat_unit),)
         ),
         key_map=KeyMap((KeyEvent(Fraction(0), notation.key_fifths, notation.key_mode),)),
+        chord_symbols=project.baseline_score.chord_symbols,
     )
-
-
-def _nearest_grid(value: Fraction, settings: NotationSettings) -> Fraction:
-    quantization = settings.quantization
-    candidates = [_round_to_step(value, quantization.grid_resolution)]
-    if quantization.allow_triplets or quantization.swing_handling == "preserve":
-        candidates.append(_round_to_step(value, quantization.grid_resolution * Fraction(2, 3)))
-    return min(candidates, key=lambda candidate: (abs(candidate - value), candidate))
-
-
-def _round_to_step(value: Fraction, step: Fraction) -> Fraction:
-    scaled = value / step
-    quotient, remainder = divmod(scaled.numerator, scaled.denominator)
-    if remainder * 2 >= scaled.denominator:
-        quotient += 1
-    return quotient * step
 
 
 def _validate_voice_overlaps(notes: tuple[ScoreNote, ...]) -> None:

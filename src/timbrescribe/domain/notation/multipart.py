@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 from hashlib import sha256
 
+from timbrescribe.domain.notation.harmony import suggest_chord_symbols
 from timbrescribe.domain.notation.instruments import get_instrument_profile
 from timbrescribe.domain.notation.measures import construct_measures
 from timbrescribe.domain.notation.models import NotationDiagnostic, NotationDraft, NotationSettings
@@ -203,6 +204,16 @@ def build_multi_part_notation(
         ),
         key_map=KeyMap((KeyEvent(Fraction(0), settings.key_fifths, settings.key_mode),)),
     )
+    suggestions = suggest_chord_symbols(score)
+    score = replace(score, chord_symbols=suggestions)
+    if suggestions:
+        diagnostics.append(
+            NotationDiagnostic(
+                "info",
+                "CHORD_SYMBOL_SUGGESTIONS",
+                f"Generated {len(suggestions)} chord suggestions; review or edit them manually",
+            )
+        )
     return NotationDraft(score, construct_measures(score), tuple(diagnostics))
 
 

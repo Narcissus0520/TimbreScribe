@@ -64,6 +64,11 @@ class NotationWorkspace(QWidget):
         self.swing = QComboBox(self)
         self.swing.addItem(self.tr("Straight"), "straight")
         self.swing.addItem(self.tr("Preserve swing placement"), "preserve")
+        self.rhythm_profile = QComboBox(self)
+        self.rhythm_profile.addItem(self.tr("Faithful detail"), "faithful")
+        self.rhythm_profile.addItem(self.tr("Balanced readability"), "balanced")
+        self.rhythm_profile.addItem(self.tr("Simple rhythms"), "simple")
+        self.rhythm_profile.setCurrentIndex(1)
         self.triplets = QCheckBox(self.tr("Allow triplet grid"), self)
         self.minimum_duration = self._fraction_combo(Fraction(1, 4))
         self.onset_tolerance = self._fraction_combo(Fraction(1, 8))
@@ -89,6 +94,7 @@ class NotationWorkspace(QWidget):
         form.addRow(self.concert_pitch)
         form.addRow(self.tr("Quantization"), self.grid)
         form.addRow(self.tr("Swing"), self.swing)
+        form.addRow(self.tr("Rhythm profile"), self.rhythm_profile)
         form.addRow(self.triplets)
         form.addRow(self.tr("Minimum duration"), self.minimum_duration)
         form.addRow(self.tr("Onset tolerance"), self.onset_tolerance)
@@ -155,6 +161,10 @@ class NotationWorkspace(QWidget):
                 swing_handling=cast(
                     Literal["straight", "preserve"],
                     self.swing.currentData(),
+                ),
+                rhythm_simplification=cast(
+                    Literal["faithful", "balanced", "simple"],
+                    self.rhythm_profile.currentData(),
                 ),
                 allow_triplets=self.triplets.isChecked(),
                 minimum_duration=self.minimum_duration.currentData(),

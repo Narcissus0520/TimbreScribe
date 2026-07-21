@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
 from pathlib import Path
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -26,6 +27,7 @@ from PySide6.QtWidgets import (
 from timbrescribe.application import JobManager, PhaseZeroService, ScorePresentation
 from timbrescribe.domain.engines import EngineDescriptor
 from timbrescribe.domain.errors import TimbreScribeError
+from timbrescribe.domain.score import beat_to_seconds, seconds_to_beat
 from timbrescribe.domain.transcription import RawTranscription
 from timbrescribe.infrastructure.basic_pitch import BasicPitchAvailability
 from timbrescribe.infrastructure.musescore import MuseScoreAvailability, open_in_musescore
@@ -204,7 +206,29 @@ class MainWindow(QMainWindow):
         controller.status.connect(self.statusBar().showMessage)
         controller.progress.connect(self.progress_bar.setValue)
         controller.error.connect(self._show_error)
+        controller.playback_position_changed.connect(self._synchronize_playback_views)
+        self.score_preview.seek_beat_requested.connect(self._seek_score_beat)
         self.import_media_action.setEnabled(True)
+
+    def _synchronize_playback_views(self, position_ms: int) -> None:
+        controller = self._media_controller
+        if controller is None:
+            return
+        self.waveform_view.set_playhead(position_ms, controller.playback_duration_ms)
+        self.piano_roll_view.set_playhead_seconds(position_ms / 1_000)
+        score = self.score_preview.score
+        if score is None:
+            return
+        beat = seconds_to_beat(score, Fraction(max(0, position_ms), 1_000))
+        self.score_preview.set_playhead_beat(beat)
+        self.verovio_view.set_playhead_beat(beat)
+
+    def _seek_score_beat(self, beat_value: object) -> None:
+        controller = self._media_controller
+        score = self.score_preview.score
+        if controller is None or score is None or not isinstance(beat_value, Fraction):
+            return
+        controller.seek_synchronized(round(float(beat_to_seconds(score, beat_value) * 1_000)))
 
     @property
     def basic_pitch_controller(self) -> BasicPitchController | None:
@@ -285,6 +309,7 @@ class MainWindow(QMainWindow):
         controller.history_changed.connect(self._editing_history_changed)
         controller.project_path_changed.connect(self._project_path_changed)
         controller.status.connect(self.statusBar().showMessage)
+        controller.diagnostic.connect(self._append_diagnostic)
         controller.error.connect(self._show_error)
         controller.recovery_available.connect(self._show_recovery_offer)
         self.editing_workspace.part_view_changed.connect(self._on_part_view_changed)
@@ -529,7 +554,7 @@ class MainWindow(QMainWindow):
         score = value.project.score
         self.score_preview.set_score(score)
         self.musicxml_preview.setPlainText(value.musicxml)
-        self.verovio_view.set_musicxml(value.musicxml)
+        self.verovio_view.set_score(score, value.musicxml)
         self.inspector_label.setText(
             _tr(
                 "标题：{title}\n音符：{notes}\n小节：{measures}\n速度：{tempo} BPM\n"

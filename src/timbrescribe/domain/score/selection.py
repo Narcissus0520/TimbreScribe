@@ -19,4 +19,5 @@ def select_score_parts(score: ScoreDocument, part_ids: tuple[str, ...]) -> Score
         raise ValueError(f"Unknown score parts: {', '.join(sorted(missing))}")
     parts = tuple(part for part in score.parts if part.id in requested)
     title = score.title if len(parts) > 1 else f"{score.title} - {parts[0].name}"
-    return replace(score, title=title, parts=parts)
+    chord_symbols = tuple(symbol for symbol in score.chord_symbols if symbol.part_id in requested)
+    return replace(score, title=title, parts=parts, chord_symbols=chord_symbols)

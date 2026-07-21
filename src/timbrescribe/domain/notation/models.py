@@ -35,6 +35,7 @@ class KeySuggestion:
 class QuantizationSettings:
     grid_resolution: Fraction = Fraction(1, 4)
     swing_handling: Literal["straight", "preserve"] = "straight"
+    rhythm_simplification: Literal["faithful", "balanced", "simple"] = "balanced"
     allow_triplets: bool = False
     minimum_duration: Fraction = Fraction(1, 4)
     onset_tolerance: Fraction = Fraction(1, 8)
@@ -85,6 +86,7 @@ class QuantizedNoteEvent:
     duration_beats: Fraction
     velocity: int
     confidence: float | None
+    tuplet_ratio: tuple[int, int] | None = None
 
     def __post_init__(self) -> None:
         if not self.id or not self.source_note_ids:
@@ -93,6 +95,8 @@ class QuantizedNoteEvent:
             raise ValueError("Quantized sounding pitch must be in [0, 127]")
         if self.start_beat < 0 or self.duration_beats <= 0:
             raise ValueError("Quantized timing must be positive")
+        if self.tuplet_ratio is not None and self.tuplet_ratio != (3, 2):
+            raise ValueError("Phase 6 supports only 3:2 triplets")
 
     @property
     def end_beat(self) -> Fraction:

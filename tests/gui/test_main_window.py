@@ -48,6 +48,8 @@ def test_reviewed_notation_verovio_and_professional_exports(
     assert workspace.settings_snapshot().key_source == "suggested"
     workspace.tempo.setValue(workspace.tempo.value() + 1)
     assert workspace.settings_snapshot().tempo_source == "manual"
+    workspace.rhythm_profile.setCurrentIndex(workspace.rhythm_profile.findData("simple"))
+    assert workspace.settings_snapshot().quantization.rhythm_simplification == "simple"
     workspace.instrument.setCurrentIndex(workspace.instrument.findData("clarinet-bb"))
     workspace.generate_button.click()
     qtbot.waitUntil(

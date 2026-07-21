@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from fractions import Fraction
 from math import ceil
 from typing import Literal
@@ -37,6 +37,23 @@ class PitchSpelling:
 
 
 @dataclass(frozen=True, slots=True)
+class PercussionNotation:
+    """Explicit GM unpitched identity and its staff display position."""
+
+    midi_unpitched: int
+    instrument_name: str
+    display_step: str
+    display_octave: int
+    notehead: Literal["normal", "x", "circle-x", "diamond", "triangle"] = "normal"
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.midi_unpitched <= 127 or not self.instrument_name:
+            raise ValueError("Percussion MIDI identity and name are required")
+        if self.display_step not in VALID_STEPS or not 0 <= self.display_octave <= 9:
+            raise ValueError("Invalid percussion staff display position")
+
+
+@dataclass(frozen=True, slots=True)
 class ScoreNote:
     """One deterministic notation note derived from raw evidence."""
 
@@ -45,7 +62,7 @@ class ScoreNote:
     part_id: str
     staff: int
     voice: int
-    written_pitch: PitchSpelling
+    written_pitch: PitchSpelling | None
     sounding_pitch: int
     start_beat: Fraction
     duration_beats: Fraction
@@ -54,6 +71,7 @@ class ScoreNote:
     edited_by_user: bool = False
     velocity: int = 80
     notations: tuple[str, ...] = ()
+    percussion: PercussionNotation | None = None
 
     def __post_init__(self) -> None:
         if not self.id or not self.part_id:
@@ -68,6 +86,8 @@ class ScoreNote:
             raise ValueError("Score velocity must be in [0, 127]")
         if self.start_beat < 0 or self.duration_beats <= 0:
             raise ValueError("Score timing must satisfy start >= 0 and duration > 0")
+        if (self.written_pitch is None) == (self.percussion is None):
+            raise ValueError("A score note must be exactly one of pitched or unpitched")
 
     @property
     def end_beat(self) -> Fraction:
@@ -87,7 +107,7 @@ class Part:
     midi_channel: int
     notes: tuple[ScoreNote, ...]
     instrument_profile: InstrumentProfile | None = None
-    clef: Literal["treble", "bass", "alto", "tenor", "grand"] = "treble"
+    clef: Literal["treble", "bass", "alto", "tenor", "grand", "percussion"] = "treble"
     staff_count: int = 1
     concert_pitch_view: bool = False
 
@@ -128,7 +148,7 @@ class InstrumentProfile:
     family: str
     midi_program: int
     percussion: bool
-    preferred_clef: Literal["treble", "bass", "alto", "tenor", "grand"]
+    preferred_clef: Literal["treble", "bass", "alto", "tenor", "grand", "percussion"]
     staff_count: int
     written_range: PitchRange
     sounding_range: PitchRange
@@ -224,6 +244,31 @@ class KeyMap:
         _validate_map(self.events)
 
 
+@dataclass(frozen=True, slots=True)
+class ChordSymbol:
+    """A reviewable harmony suggestion or explicit user-authored symbol."""
+
+    id: str
+    part_id: str
+    position_beat: Fraction
+    root_step: str
+    root_alter: int
+    kind: Literal["major", "minor", "dominant", "diminished", "augmented", "other"]
+    text: str
+    source: Literal["suggested", "manual"]
+    confidence: float | None = None
+
+    def __post_init__(self) -> None:
+        if not self.id or not self.part_id or not self.text:
+            raise ValueError("Chord identity, part, and display text are required")
+        if self.position_beat < 0 or self.root_step not in VALID_STEPS:
+            raise ValueError("Invalid chord position or root step")
+        if not -1 <= self.root_alter <= 1:
+            raise ValueError("Chord root alteration must be -1, 0, or 1")
+        if self.confidence is not None and not 0 <= self.confidence <= 1:
+            raise ValueError("Chord confidence must be absent or in [0, 1]")
+
+
 def _validate_map(
     events: tuple[TempoEvent, ...] | tuple[MeterEvent, ...] | tuple[KeyEvent, ...],
 ) -> None:
@@ -250,6 +295,9 @@ class ScoreDocument:
     tempo_map: TempoMap | None = None
     meter_map: MeterMap | None = None
     key_map: KeyMap | None = None
+    chord_symbols: tuple[ChordSymbol, ...] = ()
+    _all_notes: tuple[ScoreNote, ...] = field(init=False, repr=False, compare=False)
+    _measure_count: int = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -278,24 +326,38 @@ class ScoreDocument:
             initial_key = self.key_map.events[0]
             if (initial_key.fifths, initial_key.mode) != (self.key_fifths, self.key_mode):
                 raise ValueError("Initial key map event must match the score key")
-
-    @property
-    def all_notes(self) -> tuple[ScoreNote, ...]:
-        """Return notes from all parts in stable score order."""
-
-        return tuple(
+        chord_ids = [symbol.id for symbol in self.chord_symbols]
+        if len(chord_ids) != len(set(chord_ids)):
+            raise ValueError("Chord symbol IDs must be unique")
+        available_parts = set(part_ids)
+        if any(symbol.part_id not in available_parts for symbol in self.chord_symbols):
+            raise ValueError("Every chord symbol must refer to a score part")
+        if tuple(sorted(self.chord_symbols, key=lambda item: (item.position_beat, item.id))) != (
+            self.chord_symbols
+        ):
+            raise ValueError("Chord symbols must be in stable score order")
+        all_notes = tuple(
             sorted(
                 (note for part in self.parts for note in part.notes),
                 key=lambda note: (note.start_beat, note.part_id, note.sounding_pitch, note.id),
             )
         )
+        measure_duration = Fraction(self.beats_per_measure * 4, self.beat_unit)
+        end = max((note.end_beat for note in all_notes), default=Fraction(0))
+        object.__setattr__(self, "_all_notes", all_notes)
+        object.__setattr__(self, "_measure_count", max(1, ceil(end / measure_duration)))
+
+    @property
+    def all_notes(self) -> tuple[ScoreNote, ...]:
+        """Return notes from all parts in stable score order."""
+
+        return self._all_notes
 
     @property
     def measure_count(self) -> int:
         """Return the number of measures needed to contain every note."""
 
-        end = max((note.end_beat for note in self.all_notes), default=Fraction(0))
-        return max(1, ceil(end / self.measure_duration_beats))
+        return self._measure_count
 
     @property
     def measure_duration_beats(self) -> Fraction:

@@ -9,6 +9,7 @@ from timbrescribe.domain.notation import (
     NotationSettings,
     build_multi_part_notation,
     build_notation,
+    diagnose_score_ranges,
 )
 from timbrescribe.domain.score import ScoreDocument, ScoreProject, select_score_parts
 from timbrescribe.domain.transcription import RawTranscription
@@ -55,10 +56,13 @@ class NotationService:
     ) -> ScorePresentation:
         """Render one immutable edited snapshot without invoking model inference."""
 
+        range_diagnostics = tuple(
+            f"{item.code}: {item.message}" for item in diagnose_score_ranges(score)
+        )
         return ScorePresentation(
             ScoreProject(raw, score),
             self._musicxml.render(score),
-            diagnostics,
+            (*diagnostics, *range_diagnostics),
             settings,
         )
 

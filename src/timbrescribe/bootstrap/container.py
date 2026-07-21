@@ -29,6 +29,10 @@ from timbrescribe.infrastructure.musescore import MuseScoreLocator
 from timbrescribe.infrastructure.paths import AppPaths
 from timbrescribe.infrastructure.persistence import ProjectArchiveStore, RecoveryStore
 from timbrescribe.infrastructure.playback import SourcePlaybackService
+from timbrescribe.infrastructure.preview_synthesis import (
+    PulseWavePreviewSynthesizer,
+    QtPreviewSynthesisClient,
+)
 from timbrescribe.infrastructure.recent_media import RecentMediaStore
 from timbrescribe.infrastructure.rendering import ScoreImageExporter, VerovioRenderer
 from timbrescribe.infrastructure.waveform import QtWaveformClient
@@ -138,6 +142,8 @@ def build_main_window(paths: AppPaths | None = None) -> MainWindow:
         project_service,
         midi,
         app_paths.score_preview_midi,
+        app_paths.score_preview_audio,
+        QtPreviewSynthesisClient(PulseWavePreviewSynthesizer()),
         source_media=lambda: media_controller.current_media,
         transport=media_controller,
     )

@@ -12,8 +12,10 @@ from timbrescribe.domain.notation import (
     NotationSettings,
     QuantizationSettings,
     get_instrument_profile,
+    suggest_chord_symbols,
 )
 from timbrescribe.domain.project import EditedNoteEvent, EditingProject, derive_score
+from timbrescribe.domain.score import ChordSymbol
 
 
 class EditCommand(Protocol):
@@ -269,6 +271,83 @@ class RequantizeCommand:
     def apply(self, project: EditingProject) -> EditingProject:
         settings = replace(project.notation_settings, quantization=self.quantization)
         return _replace_content(project, settings=settings)
+
+
+@dataclass(frozen=True, slots=True)
+class SetChordSymbolCommand:
+    symbol: ChordSymbol
+    description: str = "Set chord symbol"
+
+    @property
+    def affected_entity_ids(self) -> tuple[str, ...]:
+        return (self.symbol.id,)
+
+    def apply(self, project: EditingProject) -> EditingProject:
+        if self.symbol.part_id not in {part.id for part in project.score.parts}:
+            raise ValueError(f"Unknown chord target part: {self.symbol.part_id}")
+        if self.symbol.position_beat >= (
+            project.score.measure_count * project.score.measure_duration_beats
+        ):
+            raise ValueError("Chord position must be inside the current score")
+        manual = replace(self.symbol, source="manual", confidence=None)
+        symbols = {symbol.id: symbol for symbol in project.baseline_score.chord_symbols}
+        symbols[manual.id] = manual
+        ordered = tuple(sorted(symbols.values(), key=lambda item: (item.position_beat, item.id)))
+        baseline = replace(project.baseline_score, chord_symbols=ordered)
+        candidate = replace(project, baseline_score=baseline)
+        return replace(candidate, score=derive_score(candidate))
+
+
+@dataclass(frozen=True, slots=True)
+class DeleteChordSymbolCommand:
+    chord_id: str
+    description: str = "Delete chord symbol"
+
+    def __post_init__(self) -> None:
+        if not self.chord_id:
+            raise ValueError("Chord ID is required")
+
+    @property
+    def affected_entity_ids(self) -> tuple[str, ...]:
+        return (self.chord_id,)
+
+    def apply(self, project: EditingProject) -> EditingProject:
+        if self.chord_id not in {symbol.id for symbol in project.baseline_score.chord_symbols}:
+            raise ValueError(f"Unknown chord symbol: {self.chord_id}")
+        baseline = replace(
+            project.baseline_score,
+            chord_symbols=tuple(
+                symbol
+                for symbol in project.baseline_score.chord_symbols
+                if symbol.id != self.chord_id
+            ),
+        )
+        candidate = replace(project, baseline_score=baseline)
+        return replace(candidate, score=derive_score(candidate))
+
+
+@dataclass(frozen=True, slots=True)
+class RefreshChordSuggestionsCommand:
+    description: str = "Refresh chord suggestions"
+
+    @property
+    def affected_entity_ids(self) -> tuple[str, ...]:
+        return ()
+
+    def apply(self, project: EditingProject) -> EditingProject:
+        manual = tuple(
+            symbol for symbol in project.baseline_score.chord_symbols if symbol.source == "manual"
+        )
+        manual_ids = {symbol.id for symbol in manual}
+        suggested = tuple(
+            symbol for symbol in suggest_chord_symbols(project.score) if symbol.id not in manual_ids
+        )
+        symbols = tuple(
+            sorted((*manual, *suggested), key=lambda item: (item.position_beat, item.id))
+        )
+        baseline = replace(project.baseline_score, chord_symbols=symbols)
+        candidate = replace(project, baseline_score=baseline)
+        return replace(candidate, score=derive_score(candidate))
 
 
 @dataclass(frozen=True, slots=True)

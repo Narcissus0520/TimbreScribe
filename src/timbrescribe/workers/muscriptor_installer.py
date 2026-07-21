@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
 
+from timbrescribe import __version__
 from timbrescribe.domain.errors import ErrorCode, TimbreScribeError
 from timbrescribe.infrastructure.muscriptor import (
     JsonModelAcceptanceStore,
@@ -145,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="strict", newline="\n")
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
-    _emit(HelloMessage(worker="muscriptor-installer", version="0.6.0"))
+    _emit(HelloMessage(worker="muscriptor-installer", version=__version__))
     try:
         result = _install(
             arguments.job_id,

@@ -6,12 +6,16 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Added
 
+- Deterministic Phase 6 refinement with continuity-aware piano-hand/voice allocation, explicit triplets, named rhythm profiles, non-mutating instrument-range diagnostics, and manual staff/voice correction.
+- MusicXML percussion `<unpitched>`/instrument semantics, conservative labeled chord suggestions, and undoable manual chord set/delete/refresh workflows.
+- Application-level `PreviewSynthesizer` port, coalesced background 8 kHz PCM fallback synthesis, dual source/preview Qt playback, exact tempo-map conversion, and synchronized waveform/roll/score/Verovio playheads.
+- Reproducible 1k/10k score pipeline benchmark with hardware identity, timings, peak working set, documented 25% same-machine regression threshold, and indexed long-score paths.
 - Stable-ID editable piano roll with multi-selection, add/delete/move/resize, snap, velocity, part/staff/voice inspector edits, raw-evidence overlay, keyboard shortcuts, and selection loop controls.
 - Deterministic snapshot command stack with composite bulk edits, reliable undo/redo, content-aware dirty state, and monotonic version tokens that reject stale background results.
 - Exact physical-time edited-note layer that preserves immutable raw events and re-derives notation without rerunning inference.
 - Independently versioned `.timbrescribe` project archives with deterministic hashes, atomic replacement, schema migrations, bounded in-memory loading, and derived MusicXML/MIDI consistency checks.
 - Asynchronous primary save/load, separate timestamped autosave recovery copies, recovery offer, and Save/Discard/Cancel unsaved-change handling.
-- Source-backed visual score synchronization plus a deterministic score-only preview clock and selection looping; audio synthesis refinement remains scheduled for Phase 6.
+- Source-backed audible score synchronization plus a deterministic score-only preview clock, selection looping, active-note highlighting, and score click-to-seek.
 - Reproducible project archive save/load benchmark with platform, runtime, size, timing, and peak Python memory output.
 - Reviewed tempo/key suggestions and manual meter, instrument, concert-pitch, quantization, triplet, and confidence controls.
 - Exact rational notation pipeline with repeated-note merging, staff/voice allocation, rests, cross-bar ties, pitch spelling, range diagnostics, and immutable raw provenance links.
@@ -48,10 +52,15 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Fixed
 
+- Replaced per-measure full-score scans with one-pass span indexes and cached score order/count, reducing the measured 10,000-note notation path from 22.240 seconds to 1.305 seconds on the selected Phase 6 baseline machine.
 - Preserved cancellation semantics when Qt reports a forced worker termination as a process error.
 - Forced UTF-8 on Mock worker standard streams so JSONL paths remain valid on Windows systems using non-UTF-8 console code pages.
 - Bridged Qt Multimedia 64-bit time signals explicitly for reliable PySide6 signal delivery.
 - Prevented successful FFmpeg exits without an artifact and process-start errors from promoting invalid cache entries.
+
+## [0.7.0] - Unreleased
+
+Phase 6 adds reversible notation refinement, correct percussion/harmony semantics, deterministic audible preview synchronization, and measured long-score optimization. Phase 5 real MuScriptor Small acceptance remains an independent gated prerequisite for merge.
 
 ## [0.5.0] - Unreleased
 

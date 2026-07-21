@@ -78,3 +78,10 @@ def test_score_requires_unique_parts_and_reports_empty_measure() -> None:
     empty_score = replace(score, parts=(empty_part,))
     assert empty_score.measure_count == 1
     assert empty_score.all_notes == ()
+
+
+def test_score_caches_stable_note_order_for_long_score_consumers() -> None:
+    score = _score()
+
+    assert score.all_notes is score.all_notes
+    assert score.measure_count == score.measure_count

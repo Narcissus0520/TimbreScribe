@@ -15,6 +15,7 @@ class PianoRollWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._notes: tuple[RawNoteEvent, ...] = ()
+        self._playhead_seconds = 0.0
         self.setMinimumSize(420, 260)
         self.setToolTip(self.tr("横轴为物理时间（秒），纵轴为 MIDI 音高，颜色表示置信度。"))
 
@@ -22,12 +23,20 @@ class PianoRollWidget(QWidget):
     def note_count(self) -> int:
         return len(self._notes)
 
+    @property
+    def playhead_seconds(self) -> float:
+        return self._playhead_seconds
+
     def set_notes(self, notes: tuple[RawNoteEvent, ...]) -> None:
         self._notes = notes
         self.update()
 
     def clear(self) -> None:
         self.set_notes(())
+
+    def set_playhead_seconds(self, seconds: float) -> None:
+        self._playhead_seconds = max(0.0, seconds)
+        self.update()
 
     def paintEvent(self, event: QPaintEvent) -> None:
         del event
@@ -59,8 +68,16 @@ class PianoRollWidget(QWidget):
             ratio = (note.pitch_midi - pitch_floor) / max(1, pitch_ceiling - pitch_floor)
             y = plot.bottom() - plot.height() * ratio
             confidence = note.confidence if note.confidence is not None else 0.5
-            color = QColor.fromHsvF(0.56 - 0.24 * confidence, 0.72, 0.92, 0.88)
+            active = note.onset_seconds <= self._playhead_seconds < note.offset_seconds
+            color = (
+                QColor("#ffd166")
+                if active
+                else QColor.fromHsvF(0.56 - 0.24 * confidence, 0.72, 0.92, 0.88)
+            )
             painter.fillRect(QRectF(x, y - 5.0, width, 7.0), color)
+        playhead_x = plot.left() + plot.width() * min(1.0, self._playhead_seconds / duration)
+        painter.setPen(QPen(QColor("#ffd166"), 1.5))
+        painter.drawLine(int(playhead_x), int(plot.top()), int(playhead_x), int(plot.bottom()))
         painter.setPen(QColor("#bac2cf"))
         painter.drawText(4, 24, str(pitch_ceiling))
         painter.drawText(4, self.height() - 20, str(pitch_floor))
