@@ -100,9 +100,12 @@ def _run_smoke(arguments: list[str]) -> int:
     from timbrescribe.bootstrap import build_main_window
     from timbrescribe.infrastructure.logging_config import close_logging
     from timbrescribe.infrastructure.paths import AppPaths
+    from timbrescribe.ui.release_smoke import collect_smoke_layout, parse_smoke_arguments
 
-    if len(arguments) not in {0, 2} or (arguments and arguments[0] != "--report"):
+    parsed = parse_smoke_arguments(arguments)
+    if parsed is None:
         return 2
+    destination, physical_size = parsed
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     application_value, _owns_application = _prepare_application()
     application = cast(QApplication, application_value)
@@ -110,7 +113,7 @@ def _run_smoke(arguments: list[str]) -> int:
         paths = AppPaths(Path(temporary) / "app-data")
         window = build_main_window(paths)
         try:
-            application.processEvents()
+            layout = collect_smoke_layout(application, window, physical_size)
             report = {
                 "schema_version": 1,
                 "application": "TimbreScribe",
@@ -118,6 +121,7 @@ def _run_smoke(arguments: list[str]) -> int:
                 "assistant_default_off": window.assistant_workspace.provider_mode == "off",
                 "mock_action_enabled": window.run_action.isEnabled(),
                 "window_title": window.windowTitle(),
+                "layout": layout,
             }
         finally:
             window.close()
@@ -125,13 +129,13 @@ def _run_smoke(arguments: list[str]) -> int:
             application.processEvents()
             close_logging(paths.logs)
     serialized = json.dumps(report, sort_keys=True, ensure_ascii=False) + "\n"
-    if arguments:
-        destination = Path(arguments[1]).resolve()
+    if destination is not None:
+        destination = destination.resolve()
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(serialized, encoding="utf-8")
     elif sys.stdout is not None:
         sys.stdout.write(serialized)
-    return 0
+    return 0 if layout["usable"] else 1
 
 
 if __name__ == "__main__":

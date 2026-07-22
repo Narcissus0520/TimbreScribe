@@ -103,7 +103,11 @@ class MainWindow(QMainWindow):
         self._base_window_title = _tr("TimbreScribe · 谱迹 — Basic Pitch + Mock/Test")
         self.setWindowTitle(self._base_window_title)
         self.resize(1180, 760)
-        self.setMinimumSize(860, 600)
+        # A 1920x1080 display exposes roughly 960x540 logical pixels at 200%
+        # Windows scaling.  Keep the minimum below that viewport so the menu,
+        # status bar, and dock controls remain reachable without moving the
+        # window beyond the screen edge.
+        self.setMinimumSize(860, 480)
 
         self.import_media_action = QAction(_tr("导入媒体"), self)
         self.import_media_action.setShortcut("Ctrl+I")
@@ -166,7 +170,9 @@ class MainWindow(QMainWindow):
         self.waveform_view = WaveformWidget(self)
         self.piano_roll_view = PianoRollWidget(self)
         self.editing_workspace = EditingWorkspace(self)
+        self.editing_workspace.setAccessibleName(_tr("Editable score workspace"))
         self.assistant_workspace = AssistantWorkspace(self)
+        self.assistant_workspace.setAccessibleName(_tr("Score assistant workspace"))
         self.tabs = QTabWidget(self)
         self.tabs.setAccessibleName(_tr("TimbreScribe workspaces"))
         self.verovio_tab_index = self.tabs.addTab(self.verovio_view, _tr("Verovio 乐谱"))
@@ -439,6 +445,7 @@ class MainWindow(QMainWindow):
 
         diagnostics_dock = QDockWidget(_tr("作业与诊断"), self)
         diagnostics_dock.setObjectName("diagnosticsDock")
+        diagnostics_dock.setMinimumHeight(96)
         diagnostics_dock.setWidget(self.diagnostics)
         self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, diagnostics_dock)
 
@@ -493,6 +500,7 @@ class MainWindow(QMainWindow):
                 continue
             tab_bar.setObjectName("workspaceDockTabBar")
             tab_bar.setAccessibleName(_tr("转录与乐谱工作区"))
+            tab_bar.setStyleSheet("QTabBar#workspaceDockTabBar::tab { padding: 7px 8px; }")
             tab_bar.setElideMode(Qt.TextElideMode.ElideNone)
             tab_bar.setExpanding(False)
             tab_bar.setUsesScrollButtons(True)

@@ -116,6 +116,9 @@ def test_release_documents_and_offscreen_smoke_entry_point(
     assert result["application"] == "TimbreScribe"
     assert result["assistant_default_off"] is True
     assert result["mock_action_enabled"] is True
+    assert result["layout"]["physical_viewport"] == {"width": 1920, "height": 1080}
+    assert result["layout"]["usable"] is True
+    assert main(["--smoke-test", "--physical-size", "invalid"]) == 2
     assert main(["--worker", "unknown"]) == 2
 
 
