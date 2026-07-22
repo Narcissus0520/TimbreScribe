@@ -21,6 +21,8 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 - Phase 6 deterministic notation refinement and synchronized playback merged by PR #7 as `64e2a609bc9d3d33bef568ff1b79857cfbb765c2`.
 - Phase 7 optional local/cloud score assistant merged by PR #8 as `2a4ce6c9eb1b00d2011ffe3b24778f5329bf71b4`.
 - Phase 8 Windows release hardening merged by PR #9 as `008743424c5c6c6fe9d39d1b979b14315e3f2892`.
+- Automated high-DPI release acceptance merged by PR #13 as `65a1aa6f09b3f46f89fbe6142f3115a791d344d4`.
+- Node.js 24 artifact-upload hardening merged by PR #14 as `c86f163f9770959299d4bd6d00290ebf893953af`.
 
 ## Completed in Phase 8
 
@@ -104,9 +106,11 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 | `ruff check .` | Passed |
 | `mypy src/timbrescribe` | Passed: 132 source files, strict mode |
 | `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 228 tests, 8 deselected, 77.29% branch-aware coverage |
-| Packaged artifact suite | Passed from `0fbe669`: 6 tests against frozen GUI/Workers, three DPI factors, 6,582 artifact-wide hashes, notices, and one ONNX model |
+| Local packaged artifact suite | Passed from `0fbe669`: 6 tests against frozen GUI/Workers, three DPI factors, 6,582 artifact-wide hashes, notices, and one ONNX model |
 | Source and frozen DPI matrix | Passed at 100/150/200%: 1920x1080, 1280x720, and 960x540 logical windows; at 200%, five tab hints use 379 of 384 px and all critical semantic names are present |
 | Unsigned installer candidate | Built from the `0fbe669` release manifest with Inno Setup 7.0.2; 275,436,774 bytes; signing status `unsigned-not-authorized` |
+| GitHub Windows RC workflow | Passed from merged `main` `c86f163` in 15m00s: clean onedir/ZIP, 6 packaged tests, retained three-scale DPI JSON, installer, temporary install/upgrade/association/uninstall preservation, and Node.js 24 artifact upload |
+| GitHub unsigned RC artifact | `TimbreScribe-0.9.0-windows-x64-unsigned`, 721,417,050 bytes, private workflow artifact retained through 2026-08-05; no GitHub Release or public hashes were created |
 | Clean-`main` Inno installed lifecycle baseline | Passed from `0087434`: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | Post-fix installed layout | `c808c9f` installer rebuilt; operator confirmed the five readable workspace tabs display normally after upgrade | Passed |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
