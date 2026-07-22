@@ -8,6 +8,7 @@
 | Themes | Dark and light styles use explicit foreground/background/control states; light selection uses dark blue; disabled states remain distinct | Implemented; both paths have GUI coverage |
 | Keyboard focus | Buttons, tool buttons, combos, spin boxes, text inputs and tabs have a visible 2 px blue focus border; native menus/toolbars/tabs retain keyboard navigation | Implemented |
 | Accessible names | Main workspaces, score/waveform/piano-roll/Verovio canvases, generated XML, Mock controls, diagnostics, progress, and About license panes have semantic names | Automated construction and three-scale smoke coverage |
+| Windows assistive-technology bridge | A minimized frozen GUI is inspected through Windows UI Automation; all twelve central/left tabs must be keyboard-focusable and selectable, and activating them must expose ten critical semantic names | Packaged UIA gate with retained JSON evidence |
 | Text scaling/layout | Qt layouts and scrollable/dockable workspaces are used; no bitmap-rendered UI text is required | Code review passed |
 | Dock reachability | Initial proportions prevent title-bar-only collapse; the five left workspaces use readable top-aligned short tabs with full hover descriptions, compact local padding, and a tested 400 px minimum; MuScriptor/notation forms scroll and named `View` actions activate every dock | GUI regression, three-scale source smoke, and operator-confirmed installed-layout review passed |
 | Non-color state | Worker state, diagnostics, confidence, destructive assistant diff, unavailable engines, and Mock/Test identity use text in addition to color | Code/GUI review passed |
@@ -18,6 +19,12 @@ The automated matrix starts a fresh process per scale factor before `QApplicatio
 window exceeds that viewport, critical dock geometry collapses, a workspace label is elided, either
 long form loses scrolling, or a critical semantic name is empty. It is a deterministic layout gate,
 not evidence about Windows compositor behavior, speech order, focus order, or a physical monitor.
+
+The separate packaged UIA gate uses the same Windows accessibility provider consumed by assistive
+technology. It activates all twelve tab items through `SelectionItemPattern`, requires each item to
+be keyboard-focusable, and checks the named score, waveform, piano-roll, editing, assistant,
+diagnostics, and progress surfaces after activation. This proves provider exposure and basic tab
+operability, but not Narrator speech content/order or the usability of musical notation without sight.
 
 Keyboard-only manual RC steps: launch, traverse menus/toolbars/tabs with Alt/Tab/Shift+Tab, open a
 project, run/cancel Mock, edit/undo, export, open About, toggle light theme, and dismiss every dialog

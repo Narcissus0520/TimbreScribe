@@ -66,6 +66,13 @@ jobs:
             if ($process.ExitCode -ne 0) { throw "Packaged DPI smoke failed at scale $scale." }
           }
 
+      - name: Verify packaged Windows UI Automation semantics
+        shell: pwsh
+        run: |
+          ./packaging/scripts/test_windows_uia.ps1 `
+            -Application ./work/release/dist/TimbreScribe/TimbreScribe.exe `
+            -Output ./work/release/artifacts/accessibility/windows-uia.json
+
       - name: Install pinned Inno Setup compiler
         shell: pwsh
         run: winget install --id JRSoftware.InnoSetup.7 --version 7.0.2 --exact --silent --scope user --accept-package-agreements --accept-source-agreements --disable-interactivity
@@ -87,6 +94,7 @@ jobs:
             work/release/artifacts/TimbreScribe-0.9.0-windows-x64-setup.exe
             work/release/artifacts/installer-manifest.json
             work/release/artifacts/dpi-smoke/*.json
+            work/release/artifacts/accessibility/*.json
             work/release/dist/TimbreScribe/manifests/release-manifest.json
           if-no-files-found: error
           retention-days: 14

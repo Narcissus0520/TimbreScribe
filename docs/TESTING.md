@@ -101,6 +101,20 @@ complete workspace labels, scrolling, and critical accessible-name coverage. Thi
 the physical-display, keyboard-only, and Narrator release review. The Windows release workflow
 retains the three packaged JSON reports in the unsigned candidate artifact.
 
+After a packaged build, validate the actual Windows assistive-technology provider without admin
+rights. The script starts a separate minimized process, activates every tab through UI Automation,
+records no local paths or project/media content, closes only its own process, and writes JSON
+evidence atomically:
+
+```powershell
+./packaging/scripts/test_windows_uia.ps1 `
+  -Application ./work/release/dist/TimbreScribe/TimbreScribe.exe `
+  -Output ./work/release/artifacts/accessibility/windows-uia.json
+```
+
+This gate checks semantic-name exposure and tab focus/selection support. It cannot replace a person
+reviewing actual Narrator speech order, focus order, and score usability.
+
 Build from the locked release environment and verified FFmpeg directory:
 
 ```powershell

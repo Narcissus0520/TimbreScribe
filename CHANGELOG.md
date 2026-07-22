@@ -6,6 +6,7 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Added
 
+- Packaged Windows UI Automation acceptance that activates all twelve workspace tabs, verifies keyboard focus/selection support, and records ten screen-reader semantic names as retained JSON release evidence.
 - Opt-in Phase 7 score assistant with a two-method provider port, local loopback llama.cpp lifecycle, generic OpenAI-compatible HTTPS BYOK adapter, and OS credential storage.
 - Exact minimized request preview, per-request cloud privacy approval, strict versioned command schema, stable-ID/range validation, deterministic diffs, destructive warnings, and explicit confirmation before undoable edits.
 - Assistant commands for transpose, tempo, meter, key, quantization, low-confidence deletion, instrument changes, rhythm simplification, deterministic piano-hand splitting, and non-mutating theory explanations.
