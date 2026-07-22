@@ -12,8 +12,9 @@ downloaded optional models, OS-stored credentials, and projects remain separate 
 program files. Uninstall does not delete projects or settings. Interactive uninstall offers a
 separate cleanup of downloaded models, cache, and diagnostic logs; silent uninstall preserves them.
 
-The release candidate is unsigned until signing is explicitly authorized. Verify the installer or
-ZIP SHA-256 against `installer-manifest.json` or the authorized release page before running it.
+The current release candidate remains unsigned until a publicly trusted Authenticode credential is
+configured and the signed-client matrix passes. Verify the installer or ZIP SHA-256 against
+`installer-manifest.json` or the authorized release page before running it.
 
 ## Five-minute local workflow
 

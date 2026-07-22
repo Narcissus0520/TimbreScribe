@@ -161,6 +161,17 @@ The focused protocol/PowerShell compatibility tests are:
 uv run pytest tests/unit/test_windows_acceptance.py --no-cov
 ```
 
+After authorization, Authenticode signing remains a separate candidate-changing operation. Follow
+`SIGNING_AND_PUBLICATION.md`; run `sign_windows_artifacts.ps1` only with the explicit first-party
+allowlist and rerun clean Win10/Win11 acceptance against the signed installer. Before publication,
+`finalize_windows_release.py` independently validates signatures, ZIP/manifests, raw operator
+records, exact candidate hashes, and the generated public checksum set. Its focused model-free tests
+are:
+
+```powershell
+uv run pytest tests/unit/test_windows_release_signing.py --no-cov
+```
+
 ## Test layers through Phase 8
 
 - Unit/property: source-media invariants, cache keys/cleanup, waveform/dual-preview playback/loop state, exact score-time conversion, raw/settings/provenance validation, Basic Pitch and MuScriptor normalization/error boundaries, exact quantization and triplets, continuity-aware hand/voice allocation, percussion mapping, harmony suggestions, rhythm profiles, non-mutating range diagnostics, multi-part grouping/projection, editable instrument/chord mapping, assistant request minimization/schema/scope/command mapping/diffs, command execute/undo/redo, stale-version rejection, project migrations, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
