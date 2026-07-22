@@ -50,6 +50,7 @@ from timbrescribe.ui.notation_workspace import NotationWorkspace
 from timbrescribe.ui.piano_roll import PianoRollWidget
 from timbrescribe.ui.score_preview import ScorePreviewWidget
 from timbrescribe.ui.theme import apply_theme
+from timbrescribe.ui.user_guide_dialog import UserGuideDialog
 from timbrescribe.ui.verovio_view import VerovioScoreView
 from timbrescribe.ui.waveform import WaveformWidget
 
@@ -99,6 +100,7 @@ class MainWindow(QMainWindow):
         self._app_paths = app_paths
         self._diagnostics_exporter = DiagnosticsExporter(app_paths)
         self._about_dialog: AboutDialog | None = None
+        self._user_guide_dialog: UserGuideDialog | None = None
 
         self._base_window_title = _tr("TimbreScribe · 谱迹 — Basic Pitch + Mock/Test")
         self.setWindowTitle(self._base_window_title)
@@ -159,6 +161,8 @@ class MainWindow(QMainWindow):
             str(QSettings().value("appearance/theme", "dark")) == "light"
         )
         self.about_action = QAction(_tr("About and licenses"), self)
+        self.user_guide_action = QAction(_tr("使用指南"), self)
+        self.user_guide_action.setShortcut("F1")
         self._set_advanced_exports_enabled(False)
 
         self.score_preview = ScorePreviewWidget(self)
@@ -573,11 +577,13 @@ class MainWindow(QMainWindow):
             view_menu.addAction(action)
             self.workspace_dock_actions[name] = action
         help_menu = self.menuBar().addMenu(_tr("Help"))
+        help_menu.addAction(self.user_guide_action)
         help_menu.addAction(self.about_action)
         self.export_diagnostics_action.triggered.connect(self._choose_diagnostics_destination)
         self.clear_cache_logs_action.triggered.connect(self._clear_cache_and_logs)
         self.light_theme_action.toggled.connect(self._set_light_theme)
         self.about_action.triggered.connect(self._show_about)
+        self.user_guide_action.triggered.connect(self._show_user_guide)
         self._worker.progress.connect(self._on_progress)
         self._worker.warning.connect(self._on_warning)
         self._worker.completed.connect(self._on_completed)
@@ -915,6 +921,12 @@ class MainWindow(QMainWindow):
         dialog = AboutDialog(self)
         self._about_dialog = dialog
         dialog.finished.connect(lambda _result: setattr(self, "_about_dialog", None))
+        dialog.open()
+
+    def _show_user_guide(self) -> None:
+        dialog = UserGuideDialog(self)
+        self._user_guide_dialog = dialog
+        dialog.finished.connect(lambda _result: setattr(self, "_user_guide_dialog", None))
         dialog.open()
 
     def _set_light_theme(self, enabled: bool) -> None:

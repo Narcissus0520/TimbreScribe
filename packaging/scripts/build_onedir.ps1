@@ -92,6 +92,9 @@ try {
     if (-not (Test-Path -LiteralPath (Join-Path $bundle "TimbreScribeWorker.exe") -PathType Leaf)) {
         throw "PyInstaller did not create the worker executable."
     }
+    $documentationDirectory = Join-Path $bundle "docs"
+    New-Item -ItemType Directory -Path $documentationDirectory -Force | Out-Null
+    Copy-Item -LiteralPath "docs/USER_GUIDE.md" -Destination (Join-Path $documentationDirectory "USER_GUIDE.md") -ErrorAction Stop
     $bundleFfmpeg = Join-Path $bundle "ffmpeg"
     New-Item -ItemType Directory -Path $bundleFfmpeg -Force | Out-Null
     Copy-Item -Path (Join-Path $ffmpegBin "*") -Destination $bundleFfmpeg -Recurse -Force

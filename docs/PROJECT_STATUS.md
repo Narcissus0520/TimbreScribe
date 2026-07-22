@@ -41,7 +41,7 @@ Phases 5–8 have passed their implemented acceptance gates. Final internal acce
 - Added independent-process 1920x1080 layout acceptance at 100%, 150%, and 200% for source and frozen executables; it checks viewport fit, dock geometry, complete workspace labels, scrolling, and critical semantic names.
 - Added packaged Windows UI Automation acceptance that activates all 12 workspace tabs, verifies focus and selection support, requires 10 stable screen-reader semantic names, and retains redacted JSON evidence.
 - Added versioned, candidate-bound Windows client operator evidence: a Python-free PowerShell recorder detects client/architecture/development-toolchain facts without PII, and a strict repository validator requires clean Win10/Win11 hosts, affirmed manual checks, the complete two-display/three-scale matrix, and zero P0/P1 defects.
-- Added user guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADRs 0018–0021.
+- Added a complete in-app Simplified Chinese first-run guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADRs 0018–0021.
 
 ## Phase 8 acceptance matrix
 

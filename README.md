@@ -37,7 +37,8 @@ $env:TIMBRESCRIBE_PACKAGED_APP = "$PWD\work\release\dist\TimbreScribe"
 uv run pytest -m packaging --no-cov
 ```
 
-安装和日常操作见 [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)，故障处理见
+第一次使用请先阅读 [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md)；其中包含界面说明、Mock
+练习、真实音频 Basic Pitch 转录、校对、项目保存和全部导出步骤。故障处理见
 [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md)，发布门禁见
 [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)，不签名、不公开的当前范围见
 [`docs/adr/0021-private-unsigned-candidate-scope.md`](docs/adr/0021-private-unsigned-candidate-scope.md)。
