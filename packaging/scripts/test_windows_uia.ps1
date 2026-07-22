@@ -186,11 +186,13 @@ $temporaryRoot = Join-Path (
 $safeTemporaryRoot = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
 $resolvedTemporaryRoot = [System.IO.Path]::GetFullPath($temporaryRoot)
 $originalLocalAppData = $env:LOCALAPPDATA
+$originalQtPlatform = $env:QT_QPA_PLATFORM
 $process = $null
 
 try {
     New-Item -ItemType Directory -Path $resolvedTemporaryRoot -Force | Out-Null
     $env:LOCALAPPDATA = Join-Path $resolvedTemporaryRoot "local-app-data"
+    $env:QT_QPA_PLATFORM = "windows"
     $process = Start-Process -FilePath $applicationPath -PassThru -WindowStyle Minimized
     try {
         $null = $process.WaitForInputIdle(30000)
@@ -270,6 +272,7 @@ try {
 }
 finally {
     $env:LOCALAPPDATA = $originalLocalAppData
+    $env:QT_QPA_PLATFORM = $originalQtPlatform
     if ($null -ne $process -and -not $process.HasExited) {
         $process.CloseMainWindow() | Out-Null
         if (-not $process.WaitForExit(5000)) {
