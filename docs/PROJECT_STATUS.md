@@ -2,7 +2,7 @@
 
 ## Current milestone
 
-Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, GitHub CI, clean artifact, automated high-DPI matrix, and installed-lifecycle acceptance complete.
+Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, GitHub CI, clean artifact, automated high-DPI/UI Automation matrices, and installed-lifecycle acceptance complete.
 
 Phases 5–8 have passed their implemented acceptance gates. Final v1 still retains pristine no-Python Windows 10/11, manual physical-display/Narrator review, signing, and publication-authorization gates.
 
@@ -23,6 +23,9 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 - Phase 8 Windows release hardening merged by PR #9 as `008743424c5c6c6fe9d39d1b979b14315e3f2892`.
 - Automated high-DPI release acceptance merged by PR #13 as `65a1aa6f09b3f46f89fbe6142f3115a791d344d4`.
 - Node.js 24 artifact-upload hardening merged by PR #14 as `c86f163f9770959299d4bd6d00290ebf893953af`.
+- Final pre-UIA Windows RC evidence merged by PR #15 as `af92dd386fbdecf950bcd8cadf2b102a9f26000f`.
+- Packaged Windows UI Automation acceptance merged by PR #16 as `6507eaa475ed1fbf3244ed7192581646d7740f13`.
+- Native Qt platform isolation for UI Automation merged by PR #17 as `d02daa25fafa28869637d35e888d2006445169e1`.
 
 ## Completed in Phase 8
 
@@ -34,6 +37,7 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 - Added bounded redacted crash records/diagnostic ZIPs, scoped cache/log cleanup, high-DPI initialization, persistent light/dark themes, visible keyboard focus, semantic accessible names, and About tabs for version/licenses/inventory/model/privacy.
 - Fixed first-launch dock collapse and compressed workspace labels with explicit initial proportions, readable top-aligned tabs, full hover descriptions, scrollable MuScriptor/notation forms, and keyboard/menu-reachable actions; live-widget GUI tests cover the regressions.
 - Added independent-process 1920x1080 layout acceptance at 100%, 150%, and 200% for source and frozen executables; it checks viewport fit, dock geometry, complete workspace labels, scrolling, and critical semantic names.
+- Added packaged Windows UI Automation acceptance that activates all 12 workspace tabs, verifies focus and selection support, requires 10 stable screen-reader semantic names, and retains redacted JSON evidence.
 - Added user guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADR 0018.
 
 ## Phase 8 acceptance matrix
@@ -46,7 +50,7 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 | Missing optional models do not block | GUI smoke starts with assistant off and no MuScriptor/assistant weights; default suite remains model-free | Passed |
 | File association and safe lifecycle | Temporary install, GUI smoke, in-place upgrade, setting/project preservation, association registration/removal, and silent uninstall | Passed on Windows 10 build 19045 |
 | Licenses/manifests/hashes | 54 resolved runtime distributions, 95 staged notice files, exact model/FFmpeg records, and artifact-wide file hash manifest | Passed |
-| Accessibility/high DPI | DPI policy, themes, focus/semantic-name tests, installed readable tabs, and source/frozen 1920x1080 geometry at 100/150/200% | Automated layout passed; physical displays, keyboard-only flow, and Narrator remain pending v1 |
+| Accessibility/high DPI | DPI policy, themes, focus/semantic-name tests, installed readable tabs, source/frozen 1920x1080 geometry at 100/150/200%, and packaged Windows UI Automation over all 12 tabs | Automated layout and UIA semantics passed; physical displays, full keyboard-only flow, and Narrator remain pending v1 |
 | No P0/P1 | Automated source/artifact/installer gates have no known P0/P1 defect | Passed for current local scope; pristine RC matrix pending |
 
 ## Completed in Phase 7
@@ -105,12 +109,13 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 | `ruff format --check .` | Passed: 192 files formatted |
 | `ruff check .` | Passed |
 | `mypy src/timbrescribe` | Passed: 132 source files, strict mode |
-| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 228 tests, 8 deselected, 77.29% branch-aware coverage |
+| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 228 tests, 8 deselected, 77.27% branch-aware coverage |
 | Local packaged artifact suite | Passed from `0fbe669`: 6 tests against frozen GUI/Workers, three DPI factors, 6,582 artifact-wide hashes, notices, and one ONNX model |
 | Source and frozen DPI matrix | Passed at 100/150/200%: 1920x1080, 1280x720, and 960x540 logical windows; at 200%, five tab hints use 379 of 384 px and all critical semantic names are present |
 | Unsigned installer candidate | Built from the `0fbe669` release manifest with Inno Setup 7.0.2; 275,436,774 bytes; signing status `unsigned-not-authorized` |
-| GitHub Windows RC workflow | Passed from merged `main` `c86f163` in 15m00s: clean onedir/ZIP, 6 packaged tests, retained three-scale DPI JSON, installer, temporary install/upgrade/association/uninstall preservation, and Node.js 24 artifact upload |
-| GitHub unsigned RC artifact | `TimbreScribe-0.9.0-windows-x64-unsigned`, 721,417,050 bytes, private workflow artifact retained through 2026-08-05; no GitHub Release or public hashes were created |
+| Packaged Windows UI Automation | Passed locally on Windows 10 build 19045: 221 descendants, 210 unique names, 12/12 focusable/selectable tabs, and 10/10 required semantic names; also passed on the frozen GitHub RC |
+| GitHub Windows RC workflow | Passed from merged `main` `d02daa2` in 12m48s: clean onedir/ZIP, 6 packaged tests, retained three-scale DPI and UIA JSON, installer, temporary install/upgrade/association/uninstall preservation, and Node.js 24 artifact upload |
+| GitHub unsigned RC artifact | `TimbreScribe-0.9.0-windows-x64-unsigned`, 721,445,165 bytes, digest `sha256:7574e559d61966e28e264963eac89c9e996fcff76d23a2c75a26ffb41b304de0`, private workflow artifact retained through 2026-08-05; no GitHub Release or public hashes were created |
 | Clean-`main` Inno installed lifecycle baseline | Passed from `0087434`: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | Post-fix installed layout | `c808c9f` installer rebuilt; operator confirmed the five readable workspace tabs display normally after upgrade | Passed |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
