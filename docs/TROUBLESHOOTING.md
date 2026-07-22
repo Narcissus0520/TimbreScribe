@@ -4,8 +4,9 @@
 
 - Confirm Windows 10/11 x64 and use the x64 installer/onedir as a complete directory. Do not copy
   only `TimbreScribe.exe`; `_internal`, `ffmpeg`, `licenses`, and `manifests` are required.
-- An unsigned release candidate may trigger Windows reputation warnings. Verify its published
-  SHA-256 before choosing to run it. Do not disable system security globally.
+- An unsigned release candidate may trigger Windows reputation warnings. Obtain it only from the
+  authorized private workflow and verify its SHA-256 against the accompanying
+  `installer-manifest.json` before choosing to run it. Do not disable system security globally.
 - Run `TimbreScribe.exe --smoke-test --report smoke.json` from PowerShell. A successful report proves
   that Qt, Verovio, configuration, and the model-free main window can initialize without a system
   Python.

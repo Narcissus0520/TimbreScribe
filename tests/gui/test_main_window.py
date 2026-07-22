@@ -4,11 +4,12 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QDockWidget, QScrollArea, QTabBar, QTabWidget
+from PySide6.QtWidgets import QDockWidget, QScrollArea, QTabBar, QTabWidget, QTextBrowser
 from pytestqt.qtbot import QtBot
 
 from timbrescribe.ui import MainWindow
 from timbrescribe.ui.about_dialog import AboutDialog
+from timbrescribe.ui.user_guide_dialog import UserGuideDialog
 
 
 def _run_success(window: MainWindow, qtbot: QtBot) -> None:
@@ -167,3 +168,18 @@ def test_about_licenses_and_light_theme_are_reachable(
     main_window.light_theme_action.setChecked(not original_theme)
     assert main_window.light_theme_action.isChecked() is not original_theme
     main_window.light_theme_action.setChecked(original_theme)
+
+
+def test_chinese_user_guide_is_reachable_from_help(
+    main_window: MainWindow,
+    qtbot: QtBot,
+) -> None:
+    main_window.user_guide_action.trigger()
+    qtbot.waitUntil(lambda: main_window.findChild(UserGuideDialog) is not None)
+    dialog = main_window.findChild(UserGuideDialog)
+    assert dialog is not None
+    viewer = dialog.findChild(QTextBrowser)
+    assert viewer is not None
+    assert "五分钟入门" in viewer.toPlainText()
+    assert "示例.mp3" in viewer.toPlainText()
+    dialog.close()

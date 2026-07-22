@@ -6,6 +6,9 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Added
 
+- A complete Simplified Chinese first-run guide covering the actual dock/tab layout, Mock practice,
+  real-media Basic Pitch transcription, reviewed notation, editing, projects, exports, optional
+  MuScriptor/assistant boundaries, and troubleshooting, reachable in-app with **Help → 使用指南**.
 - Fail-closed Windows Authenticode tooling that selects an explicit certificate thumbprint, signs
   only TimbreScribe first-party executables and installer, requires SHA-256 plus an RFC 3161
   timestamp, verifies the signer, and records privacy-safe signing evidence.

@@ -1,77 +1,305 @@
-# TimbreScribe User Guide
+# TimbreScribe · 谱迹 使用指南
 
-## Install, upgrade, and uninstall
+本指南适用于 `0.9.0` 私有未签名候选版，面向第一次打开 TimbreScribe 的用户。建议先用
+Mock/Test 熟悉界面，再用 Basic Pitch 处理真实音频。
 
-Run the Windows x64 setup as the user who will use TimbreScribe. Administrator access is not needed
-by default. The installer places the application under Local AppData, can add Start-menu/desktop
-shortcuts, and associates `.timbrescribe` project files. Opening one of those files starts the same
-validated project loader used by **File → Open project**.
+> 自动转录生成的是可编辑草稿，不保证对任意混合录音直接得到出版级乐谱。Basic Pitch
+> 不分离乐器，对清晰的单一乐器录音效果最好。源媒体始终保持只读。
 
-Install a newer build over the same location to upgrade. Application settings, recovery snapshots,
-downloaded optional models, OS-stored credentials, and projects remain separate from installed
-program files. Uninstall does not delete projects or settings. Interactive uninstall offers a
-separate cleanup of downloaded models, cache, and diagnostic logs; silent uninstall preserves them.
+## 1. 启动程序
 
-The current release candidate is private and intentionally unsigned; no public download page is
-planned. Testers must obtain it through the authorized private workflow artifact and verify the
-installer or ZIP SHA-256 against its accompanying `installer-manifest.json` before running it.
+### 1.1 直接运行当前构建
 
-## Five-minute local workflow
+在仓库根目录打开 PowerShell：
 
-1. Start TimbreScribe and use **Mock/Test** first. Choose monophonic or polyphonic and run it.
-2. Review the compact score, Verovio engraving, MusicXML source, and editable piano roll.
-3. In **Score setup**, review tempo/key/meter/instrument suggestions and regenerate notation.
-4. Edit notes with the inspector or keyboard, and use Ctrl+Z/Ctrl+Y to verify undo/redo.
-5. Export MusicXML/MXL, score MIDI, SVG, PNG, or vector PDF. Save a `.timbrescribe` project to keep
-   raw evidence, settings, stable IDs, score state, and provenance.
+```powershell
+& ".\work\release\dist\TimbreScribe\TimbreScribe.exe"
+```
 
-Mock output is always labeled **Mock/Test** and is not a claim about real recognition accuracy.
+必须保留整个 `TimbreScribe` 目录，不能只复制 `TimbreScribe.exe`；同目录中的
+`_internal`、`ffmpeg`、`licenses` 和 `manifests` 都是运行所需文件。
 
-## Import and Basic Pitch transcription
+### 1.2 安装后运行
 
-Import WAV/MP3/video from the media workspace. TimbreScribe probes it read-only, then uses the
-bundled verified FFmpeg to decode a selected range into managed cache. The source file is never
-modified. Use playback/seek and waveform selection before running a model on long media.
+运行私下取得的 `TimbreScribe-0.9.0-windows-x64-setup.exe`，然后从开始菜单或桌面快捷方式
+启动 **TimbreScribe**。默认是当前用户安装，不需要管理员权限。
 
-The Windows release includes the verified Basic Pitch 0.4.0 ONNX CPU baseline. It detects multiple
-pitches but does not separate instruments and works best on a clear single-instrument recording.
-Run it from the Basic Pitch workspace, review confidence in the raw piano roll, and export raw MIDI
-or convert the view into the internal score model. The original events remain intact when a
-confidence filter changes the view.
+当前候选版有意保持未签名。Windows 如果显示“Windows 已保护你的电脑”，请先确认安装包来自
+本项目的私有工作流，并与旁边的 `installer-manifest.json` 核对 SHA-256；确认无误后选择
+**更多信息 → 仍要运行**。不要全局关闭 Windows 安全功能。
 
-MuScriptor remains experimental/non-commercial and is not bundled. No token or model is required
-for every other feature. If enabled later, exact terms/revision acceptance, OS credential storage,
-verified weights, resource preflight, and a per-run source-rights confirmation are mandatory.
+### 1.3 在应用内打开本指南
 
-## Score review, projects, and exports
+选择 **帮助（Help）→ 使用指南**。安装包内携带的指南与本文件一致。
 
-Notation suggestions are reviewable rather than authoritative. Tempo, key, meter, quantization,
-piano-hand split, instrument profile, percussion mapping, chord symbols, staff, and voice remain
-editable. Range diagnostics warn without silently clamping or deleting notes. All professional
-exports derive from the same immutable score snapshot.
+## 2. 先认识界面
 
-Project saves use an atomic, versioned ZIP container with a content hash manifest. Autosave writes
-only to the recovery directory and never overwrites the primary file. If a background result was
-started from an older project revision, it is rejected instead of replacing newer edits.
+| 区域 | 用途 |
+|---|---|
+| 顶部菜单和工具栏 | 打开/保存项目、导入媒体、启动转录、撤销/重做和导出 |
+| 左侧工作区 | 在 **媒体、Mock、Basic、MuScriptor、乐谱** 五个面板之间切换 |
+| 中央标签页 | 查看 Verovio 乐谱、简化乐谱、MusicXML、波形、原始钢琴卷帘、可编辑乐谱和助手 |
+| 右侧“乐谱检查器” | 显示当前乐谱或分谱的摘要 |
+| 底部“作业与诊断” | 显示转录阶段、警告和错误；最下方进度条显示后台任务进度 |
 
-## Optional score assistant
+左下角的 **媒体 / Mock / Basic / MuScriptor / 乐谱** 是同一位置的五个工作区切换标签，
+不是五块内容挤在一起。点击其中一个标签即可显示相应面板。如果某个面板被关闭，使用
+**视图（View）→ Show 媒体/Mock/Basic/MuScriptor/乐谱** 恢复。
 
-The assistant is off by default. Local mode uses a user-selected `llama-server.exe` and reviewed
-GGUF; cloud mode uses a credential-free HTTPS endpoint, model ID, and an API key stored in the OS
-credential service. Select stable notes or a measure range, inspect the exact minimized JSON, and
-approve each cloud send. Audio, project archives, paths, and credentials are never sent. A strict
-schema is converted to a deterministic diff; no edit occurs until confirmation, and every edit is
-undoable. See `ASSISTANT_PRIVACY.md` in About.
+中央标签页的主要用途：
 
-## Appearance, keyboard, and help
+- **Verovio 乐谱**：分页排版预览，可缩放、适合宽度或适合页面。
+- **乐谱**：轻量级快速预览。
+- **MusicXML**：查看当前生成的 MusicXML 源文本。
+- **波形/源媒体**：查看解码后的音频波形。
+- **原始钢琴卷帘**：查看模型识别出的原始音符和置信度筛选结果。
+- **可编辑乐谱**：移动、增删、缩放音符，设置声部、谱表和乐器。
+- **Score assistant**：可选功能；第一次使用可以完全忽略。
 
-Use **View → Use light theme** for the light path; the preference persists. Windows/Qt high-DPI
-scaling remains enabled and focusable controls have a visible two-pixel focus ring. Standard menu,
-toolbar, tab, form, and editing controls participate in keyboard focus. Core shortcuts include
-Ctrl+O (open), Ctrl+S (save), Ctrl+Z/Ctrl+Y (undo/redo), and the editing-workspace arrow/selection
-shortcuts documented by its tooltips.
+## 3. 五分钟入门：先运行 Mock/Test
 
-Use **Help → About and licenses** for application version, project notice, generated dependency
-inventory, model terms, and privacy information. Use **File → Export diagnostics** to create a
-bounded, redacted support ZIP. It contains environment metadata and recent logs, not projects,
-media, model weights, settings, or credentials. Inspect it before sharing.
+Mock/Test 不读取真实音频，也不需要模型，适合确认界面、乐谱和导出流程正常。
+
+1. 在左侧点击 **Mock**。
+2. “音符场景”选择 **单旋律** 或 **和弦/复音**。
+3. “运行结果”保持 **成功**。另外两个选项仅用于模拟警告或失败。
+4. 点击顶部 **运行 Mock 转录**，也可以按 `Ctrl+R`。
+5. 等待底部状态显示“Mock 乐谱已生成”。
+6. 依次查看中央的 **Verovio 乐谱、乐谱、MusicXML、可编辑乐谱**。
+7. 选择 **文件 → 项目另存为**，保存为 `.timbrescribe`。
+8. 选择 **导出 → 导出总谱 MusicXML** 或 **导出总谱 MIDI**，确认导出流程。
+
+Mock 结果始终标记为 **Mock/Test**，不能代表真实音频识别准确率。
+
+## 4. 转录真实音频
+
+当前稳定入口是 Basic Pitch。下面以
+`%USERPROFILE%\Music\示例.mp3` 为例；实际操作时选择你拥有合法使用权的音频。
+
+### 4.1 导入媒体
+
+1. 点击顶部 **导入媒体**，也可以按 `Ctrl+I`，然后选择音频文件。
+2. 也可以把 `.wav`、`.mp3` 或 `.mp4` 文件直接拖进窗口。
+3. 左侧点击 **媒体**，检查：
+   - “源文件”是否为所选文件；
+   - “容器/时长”是否正确；
+   - FFmpeg 是否显示“已验证参考构建”；
+   - 有多个音频流时是否选中了正确的一条。
+
+导入只读取元数据，不会修改原文件。
+
+### 4.2 选择并解码分析范围
+
+1. 在“分析范围”中填写开始秒数和结束秒数。
+2. 第一次建议只处理 15–30 秒，例如 `0.000 s` 到 `30.000 s`，先确认效果和速度。
+3. 点击 **解码选定范围**。
+4. 解码完成后，中央 **波形/源媒体** 会显示波形。
+5. 用 **播放 / 暂停 / 停止** 和时间滑块试听，确认范围正确。
+
+完整歌曲耗时更长，也会产生更多待校对音符。建议先找到乐器相对清晰的片段，再扩大范围。
+
+### 4.3 运行 Basic Pitch
+
+1. 在左侧点击 **Basic**。
+2. 顶部应显示“可用：Basic Pitch … / ONNX Runtime …（CPU）”。
+3. 第一次保持默认参数：
+   - 起音阈值：`0.50`；
+   - 帧阈值：`0.30`；
+   - 最短音符：约 `127.7 ms`；
+   - 频率范围：`55–1760 Hz`；
+   - 视图/导出置信度：`0.40`。
+4. 点击 **运行 Basic Pitch**。
+5. 转录在独立进程中运行；观察底部进度和“作业与诊断”，不要重复点击运行。
+6. 完成后查看“原始事件”和“当前置信度视图”的数量，再打开中央
+   **原始钢琴卷帘**。
+
+“视图/导出置信度”只控制原始钢琴卷帘和“导出原始 MIDI”中可见的事件，不会删除保存的原始
+识别证据。提高数值会隐藏更多低置信度音符；降低数值会显示更多候选音符。
+
+如果需要中止，点击 **取消**。取消或失败不会用不完整结果覆盖当前项目。
+
+### 4.4 把原始音符生成乐谱
+
+Basic Pitch 完成后还需要人工确认记谱设置：
+
+1. 在左侧点击 **乐谱**。
+2. 检查顶部显示的速度和调号建议；它们只是建议，并非确定答案。
+3. 设置速度、拍号、调号、大小调、目标乐器和量化参数。
+4. 点击 **Generate reviewed notation**（生成经审阅的乐谱）。
+5. 打开中央 **Verovio 乐谱** 检查排版，再打开 **可编辑乐谱** 校对音符。
+
+如果 Basic Pitch 已完成但中央仍显示空白，通常是还没有执行这一步。
+
+## 5. 常用乐谱设置
+
+| 设置 | 含义 | 初次建议 |
+|---|---|---|
+| Tempo (BPM) | 乐谱速度，也影响秒与拍之间的换算 | 先试听建议值；不准时手动填写 |
+| Meter | 拍号 | 流行歌曲通常先尝试 `4/4` |
+| Key fifths | 调号中的升降号数量；负数为降号，正数为升号 | 不确定时先保留建议值 |
+| Mode | Major / Minor | 结合听感确认大调或小调 |
+| Instrument | 目标记谱乐器，不是识别时要“听”的乐器 | 单旋律先选通用旋律或对应乐器 |
+| Concert-pitch view | 是否按实音显示移调乐器 | 普通钢琴/人声通常无需改动 |
+| Quantization | 节奏吸附网格 | 默认十六分音符适合作为起点 |
+| Rhythm profile | 忠实细节、均衡可读性或简化节奏 | 先用 **Balanced readability** |
+| Allow triplet grid | 允许三连音网格 | 只有明显三连音时开启 |
+| Confidence filter | 生成乐谱时忽略低置信度事件 | 从 `0.00` 或较低值开始，逐步提高 |
+
+改变设置后再次点击 **Generate reviewed notation**。重新生成不会删除 Basic Pitch 的原始事件。
+
+## 6. 校对和编辑音符
+
+打开中央 **可编辑乐谱**。彩色矩形是当前乐谱音符，虚线覆盖层是保留的原始识别证据。
+
+### 6.1 鼠标操作
+
+- 单击音符：选择一个音符。
+- `Ctrl` + 单击：增加或移除多选音符。
+- 拖动音符：改变开始位置和音高。
+- 拖动音符右边缘：改变时值。
+- 双击空白处：新增音符。
+- 点击 **Delete selection**：删除所选音符。
+
+### 6.2 键盘操作
+
+- `Ctrl+A`：选择当前视图中的全部音符。
+- `Delete` 或 `Backspace`：删除所选音符。
+- `←` / `→`：按当前 Snap 网格移动音符。
+- `↑` / `↓`：升高或降低一个半音。
+- `Shift+←` / `Shift+→`：缩短或延长音符。
+- `Ctrl+Z`：撤销。
+- `Ctrl+Y` 或 `Ctrl+Shift+Z`：重做。
+
+### 6.3 右侧编辑检查器
+
+只选择一个音符时，可以修改：
+
+- Sounding MIDI（实音 MIDI 音高）；
+- Start beat（开始拍）；
+- Duration beats（时值）；
+- Part（声部）；
+- Staff / Voice（谱表和声部层）；
+- Velocity（力度）。
+
+修改后点击 **Apply inspector edit**。需要改变整个声部的目标乐器时，选择 Part instrument，
+再点击 **Apply part instrument**。
+
+勾选 **Raw evidence overlay** 可比较原始识别与编辑结果。勾选 **Loop selection** 后点击
+**Play source + preview**，可以循环试听所选音符范围。
+
+## 7. 保存和重新打开项目
+
+建议在完成第一次乐谱生成后立即保存：
+
+- `Ctrl+S`：保存当前项目；首次保存会要求选择位置。
+- `Ctrl+Shift+S`：项目另存为。
+- `Ctrl+O`：打开 `.timbrescribe` 项目。
+
+项目文件保存原始转录证据、当前编辑结果、记谱设置、来源信息和稳定音符 ID。保存采用原子替换；
+自动保存只写入独立恢复目录，不会悄悄覆盖主项目文件。源音频默认按路径和哈希引用，不会自动复制
+进项目。
+
+关闭或打开其他项目时，如果当前项目有未保存修改，应用会要求选择保存、放弃或取消。
+
+## 8. 导出文件怎么选
+
+所有专业导出都来自同一份当前乐谱快照。导出项呈灰色时，先完成一次乐谱生成。
+
+| 导出项 | 适用场景 |
+|---|---|
+| 导出总谱 MusicXML (`.musicxml`) | 推荐；继续在 MuseScore、Dorico、Sibelius 等软件中排版和编辑 |
+| 导出压缩 MusicXML (`.mxl`) | MusicXML 的紧凑容器格式 |
+| 导出总谱 MIDI (`.mid`) | 播放、DAW 或其他 MIDI 工作流；来自当前编辑后的乐谱 |
+| 导出原始 MIDI | 仅导出 Basic Pitch 原始事件的当前置信度视图，用于对照 |
+| 导出 SVG | 无限缩放的单页矢量图 |
+| 导出 PNG | 普通图片 |
+| 导出矢量 PDF | 打印或分享乐谱 |
+| 导出当前分谱 | 多声部项目只导出当前选择的声部 |
+| 在 MuseScore 中打开 | 仅在检测到本机 MuseScore 4 时可用 |
+
+导出前先保存 `.timbrescribe` 项目，以便以后继续校对。导出失败不会破坏目标位置中已有的旧文件。
+
+## 9. MuScriptor：可选的实验性多声部流程
+
+第一次使用时可以跳过 MuScriptor。它是实验性、非商业功能，模型不会随应用捆绑，也不会自动
+下载。只有明确接受当前模型条款后才可安装。
+
+如果确实需要尝试：
+
+1. 先按第 4.1–4.2 节导入并解码媒体。
+2. 在左侧点击 **MuScriptor**，优先选择 **Small — stable first choice**。
+3. 阅读界面显示的精确条款和模型版本，勾选已审阅，再点击
+   **Record explicit acceptance**。
+4. 输入 Hugging Face 令牌，点击 **Save token in system credentials**。令牌只进入操作系统凭据库，
+   不进入项目和日志。
+5. 点击 **Install selected verified model**，等待哈希验证完成。
+6. 选择 CPU 或通过资源预检的 NVIDIA CUDA。
+7. 每次运行前勾选“拥有源媒体及转录输出所需权利”的确认框。
+8. 点击 **Run MuScriptor (experimental)**。
+9. 完成后仍然进入左侧 **乐谱**，审阅设置并生成乐谱。
+
+先验证 Small，再考虑 Medium。缺少令牌、模型或 CUDA 不会影响 Mock、Basic Pitch、编辑、项目和
+导出。
+
+## 10. Score assistant：可选功能
+
+助手默认关闭，不影响任何核心功能。它可以使用用户自备的本地 llama.cpp/GGUF，或明确配置的
+OpenAI-compatible HTTPS 服务。云端模式不会上传音频，但会发送你预览并批准的最小化符号乐谱
+上下文。
+
+使用助手前必须：
+
+1. 在可编辑乐谱中选择稳定音符，或明确指定小节范围。
+2. 填写指令。
+3. 点击 **Preview exact provider data**，检查实际请求 JSON。
+4. 云端模式每次都要明确批准发送。
+5. 收到建议后检查差异，再点击 **Confirm project changes**。
+
+助手不能直接执行代码、Shell 命令或任意改写项目文件。所有修改都通过确定性命令执行并可撤销。
+
+## 11. 常见问题
+
+### 按钮是灰色的
+
+- **解码选定范围**：先导入支持的媒体并选择音频流。
+- **运行 Basic Pitch**：先完成范围解码；如果仍不可用，确认运行的是完整构建目录。
+- **Generate reviewed notation**：先完成 Mock、Basic Pitch 或 MuScriptor 原始转录。
+- **保存/导出**：先生成一次乐谱。
+- **在 MuseScore 中打开**：需要本机安装并被检测到的 MuseScore 4。
+
+### Basic Pitch 完成后没有乐谱
+
+打开左侧 **乐谱**，审阅设置并点击 **Generate reviewed notation**。原始钢琴卷帘有音符只说明
+模型结果已就绪，并不代表记谱步骤已经执行。
+
+### 左侧面板不见了
+
+使用 **视图（View）→ Show …** 恢复。窗口左下角的五个标签用于切换叠放的工作区。
+
+### 转录结果音符过多或过少
+
+先在 15–30 秒片段上调整：
+
+- 误识别过多：适当提高 Basic 的起音/帧阈值或乐谱置信度过滤值。
+- 漏音过多：适当降低阈值。
+- 短碎音过多：提高最短音符时长，或在乐谱设置中选择更简单的 Rhythm profile。
+
+每次只改一个参数并记录效果。原始事件始终保留，可随时重新生成乐谱。
+
+### 应用或媒体处理失败
+
+保持完整安装/onedir，不要单独复制 EXE。查看底部 **作业与诊断**，必要时使用
+**文件 → Export diagnostics…** 生成经过裁剪和脱敏的诊断 ZIP。分享前仍应自行检查内容。
+
+更详细的错误处理见 [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)。
+
+## 12. 隐私、数据和卸载边界
+
+- 核心导入、转录、编辑、保存和导出均可在本机离线完成，无默认遥测。
+- 源媒体不会被修改；解码结果只写入受管理缓存。
+- 清理派生缓存不会删除源媒体、项目、模型、凭据或设置。
+- 卸载不会删除项目和设置。交互式卸载只会在确认后清理下载模型、缓存和诊断日志。
+- 音频、项目归档、路径和凭据不会发送给 Score assistant。
+- 只有用户主动配置云端助手、预览准确请求并逐次确认时，符号乐谱上下文才会发送。
+
+遇到问题时，先保存项目并保留原始媒体；不要为了排错删除唯一副本。

@@ -45,6 +45,7 @@ def test_bundle_structure_notices_models_and_hash_manifest() -> None:
         "TimbreScribeWorker.exe",
         "ffmpeg/ffmpeg.exe",
         "ffmpeg/ffprobe.exe",
+        "docs/USER_GUIDE.md",
         "licenses/LICENSE",
         "licenses/THIRD_PARTY_NOTICES.md",
         "licenses/THIRD_PARTY_INVENTORY.json",
