@@ -35,3 +35,9 @@ Screen-reader RC steps: inspect the main window and About dialog with Windows Na
 named custom canvases/diagnostics/progress are announced, and record any unlabeled dynamic control as
 a release defect. Automated tests cannot establish speech order or musical-canvas usability; final
 v1 requires this manual Narrator/display matrix and closure of all P0/P1 findings.
+
+Record the human results with `record_windows_acceptance.ps1`. Protocol v1 keeps keyboard-only,
+Narrator, light/dark, and each physical display/scale observation distinct. One host record can pass
+with only the display class physically present, but `validate_windows_acceptance.py` cannot pass the
+final matrix until both Windows client families and all six display/scale combinations are present.
+UI Automation evidence is complementary and is never used to synthesize a Narrator pass.

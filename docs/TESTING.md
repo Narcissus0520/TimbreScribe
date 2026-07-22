@@ -143,6 +143,24 @@ silently uninstalls, and verifies association cleanup without deleting data. The
 workflow performs the same gates and uploads only unsigned, short-retention candidates. Final v1
 still requires the pristine Windows 10/11 and accessibility matrix in `CLEAN_MACHINE_VALIDATION.md`.
 
+The release artifact also carries `record_windows_acceptance.ps1`, its version-1 answer template,
+the matrix validator, and the two manual review documents. The recorder needs only built-in Windows
+PowerShell on a clean client; it hashes the candidate before accepting observations and never turns
+an automated result into a human pass. Validate returned Win10/Win11 records in the managed
+repository environment:
+
+```powershell
+uv run python packaging/scripts/validate_windows_acceptance.py `
+  windows-10-acceptance.json windows-11-acceptance.json `
+  --output windows-client-matrix.json
+```
+
+The focused protocol/PowerShell compatibility tests are:
+
+```powershell
+uv run pytest tests/unit/test_windows_acceptance.py --no-cov
+```
+
 ## Test layers through Phase 8
 
 - Unit/property: source-media invariants, cache keys/cleanup, waveform/dual-preview playback/loop state, exact score-time conversion, raw/settings/provenance validation, Basic Pitch and MuScriptor normalization/error boundaries, exact quantization and triplets, continuity-aware hand/voice allocation, percussion mapping, harmony suggestions, rhythm profiles, non-mutating range diagnostics, multi-part grouping/projection, editable instrument/chord mapping, assistant request minimization/schema/scope/command mapping/diffs, command execute/undo/redo, stale-version rejection, project migrations, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.

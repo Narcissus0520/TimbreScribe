@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "manual_checks": [
+    {"id": "install_and_launch", "status": "not_run", "notes": ""},
+    {"id": "mock_transcription", "status": "not_run", "notes": ""},
+    {"id": "basic_pitch_cpu", "status": "not_run", "notes": ""},
+    {"id": "project_save_reopen", "status": "not_run", "notes": ""},
+    {"id": "professional_exports", "status": "not_run", "notes": ""},
+    {"id": "project_association", "status": "not_run", "notes": ""},
+    {
+      "id": "upgrade_preserves_settings_projects",
+      "status": "not_run",
+      "notes": ""
+    },
+    {"id": "uninstall_preserves_projects", "status": "not_run", "notes": ""},
+    {"id": "optional_models_absent", "status": "not_run", "notes": ""},
+    {"id": "offline_core_workflow", "status": "not_run", "notes": ""},
+    {"id": "keyboard_only_workflow", "status": "not_run", "notes": ""},
+    {"id": "narrator_labels_and_order", "status": "not_run", "notes": ""},
+    {"id": "light_and_dark_themes", "status": "not_run", "notes": ""},
+    {"id": "crash_diagnostics_review", "status": "not_run", "notes": ""},
+    {"id": "cache_cleanup_scope", "status": "not_run", "notes": ""}
+  ],
+  "display_checks": [
+    {"display_class": "1920x1080", "scale_percent": 100, "status": "not_run", "notes": ""},
+    {"display_class": "1920x1080", "scale_percent": 150, "status": "not_run", "notes": ""},
+    {"display_class": "1920x1080", "scale_percent": 200, "status": "not_run", "notes": ""},
+    {"display_class": "high-dpi", "scale_percent": 100, "status": "not_run", "notes": ""},
+    {"display_class": "high-dpi", "scale_percent": 150, "status": "not_run", "notes": ""},
+    {"display_class": "high-dpi", "scale_percent": 200, "status": "not_run", "notes": ""}
+  ],
+  "p0_defect_count": 0,
+  "p1_defect_count": 0,
+  "operator_affirmation": false
+}

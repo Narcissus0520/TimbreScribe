@@ -6,6 +6,7 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Added
 
+- Versioned, privacy-minimized Windows client acceptance records with candidate hash binding, clean-toolchain detection, explicit operator affirmation, and strict Win10/Win11 plus physical-display matrix aggregation.
 - Packaged Windows UI Automation acceptance that activates all twelve workspace tabs, verifies keyboard focus/selection support, and records ten screen-reader semantic names as retained JSON release evidence.
 - Opt-in Phase 7 score assistant with a two-method provider port, local loopback llama.cpp lifecycle, generic OpenAI-compatible HTTPS BYOK adapter, and OS credential storage.
 - Exact minimized request preview, per-request cloud privacy approval, strict versioned command schema, stable-ID/range validation, deterministic diffs, destructive warnings, and explicit confirmation before undoable edits.
