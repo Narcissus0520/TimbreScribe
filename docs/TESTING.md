@@ -98,7 +98,8 @@ uv run pytest -q --no-cov tests/gui/test_dpi_smoke.py
 
 Each process reports the physical/logical viewport, effective scale, window and dock geometry,
 complete workspace labels, scrolling, and critical accessible-name coverage. This does not replace
-the physical-display, keyboard-only, and Narrator release review.
+the physical-display, keyboard-only, and Narrator release review. The Windows release workflow
+retains the three packaged JSON reports in the unsigned candidate artifact.
 
 Build from the locked release environment and verified FFmpeg directory:
 

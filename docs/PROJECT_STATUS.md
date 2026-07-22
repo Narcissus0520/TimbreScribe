@@ -2,9 +2,9 @@
 
 ## Current milestone
 
-Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, GitHub CI, clean-`main` artifact, and installed-lifecycle acceptance complete.
+Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, GitHub CI, clean artifact, automated high-DPI matrix, and installed-lifecycle acceptance complete.
 
-Phases 5–8 have passed their implemented acceptance gates and merged to `main`. Final v1 still retains pristine no-Python Windows 10/11, manual Narrator/DPI, signing, and publication-authorization gates.
+Phases 5–8 have passed their implemented acceptance gates. Final v1 still retains pristine no-Python Windows 10/11, manual physical-display/Narrator review, signing, and publication-authorization gates.
 
 ## Current application version
 
@@ -31,6 +31,7 @@ Phases 5–8 have passed their implemented acceptance gates and merged to `main`
 - Added packaged GUI, Mock protocol/artifact, Basic Pitch preload, model allowlist, notice, and manifest tests; added installed GUI/association/upgrade/uninstall preservation automation and a manual pristine Windows matrix.
 - Added bounded redacted crash records/diagnostic ZIPs, scoped cache/log cleanup, high-DPI initialization, persistent light/dark themes, visible keyboard focus, semantic accessible names, and About tabs for version/licenses/inventory/model/privacy.
 - Fixed first-launch dock collapse and compressed workspace labels with explicit initial proportions, readable top-aligned tabs, full hover descriptions, scrollable MuScriptor/notation forms, and keyboard/menu-reachable actions; live-widget GUI tests cover the regressions.
+- Added independent-process 1920x1080 layout acceptance at 100%, 150%, and 200% for source and frozen executables; it checks viewport fit, dock geometry, complete workspace labels, scrolling, and critical semantic names.
 - Added user guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADR 0018.
 
 ## Phase 8 acceptance matrix
@@ -43,7 +44,7 @@ Phases 5–8 have passed their implemented acceptance gates and merged to `main`
 | Missing optional models do not block | GUI smoke starts with assistant off and no MuScriptor/assistant weights; default suite remains model-free | Passed |
 | File association and safe lifecycle | Temporary install, GUI smoke, in-place upgrade, setting/project preservation, association registration/removal, and silent uninstall | Passed on Windows 10 build 19045 |
 | Licenses/manifests/hashes | 54 resolved runtime distributions, 95 staged notice files, exact model/FFmpeg records, and artifact-wide file hash manifest | Passed |
-| Accessibility/high DPI | DPI policy, themes, focus/semantic-name tests and review documented; readable installed workspace tabs manually confirmed | Layout passed; Narrator and full 100/150/200% display matrix remain pending v1 |
+| Accessibility/high DPI | DPI policy, themes, focus/semantic-name tests, installed readable tabs, and source/frozen 1920x1080 geometry at 100/150/200% | Automated layout passed; physical displays, keyboard-only flow, and Narrator remain pending v1 |
 | No P0/P1 | Automated source/artifact/installer gates have no known P0/P1 defect | Passed for current local scope; pristine RC matrix pending |
 
 ## Completed in Phase 7
@@ -99,11 +100,13 @@ Phases 5–8 have passed their implemented acceptance gates and merged to `main`
 | Command | Result |
 |---|---|
 | `uv lock --check` | Passed: 147 packages resolved |
-| `ruff format --check .` | Passed: 190 files formatted |
+| `ruff format --check .` | Passed: 192 files formatted |
 | `ruff check .` | Passed |
-| `mypy src/timbrescribe` | Passed: 131 source files, strict mode |
-| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 225 tests, 6 deselected, 77.22% branch-aware coverage |
-| Clean-`main` packaged artifact suite | Passed from `c808c9f`: 4 tests against frozen GUI/Workers, 6,582 artifact-wide hashes, notices, and one ONNX model |
+| `mypy src/timbrescribe` | Passed: 132 source files, strict mode |
+| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 228 tests, 8 deselected, 77.29% branch-aware coverage |
+| Packaged artifact suite | Passed from `0fbe669`: 6 tests against frozen GUI/Workers, three DPI factors, 6,582 artifact-wide hashes, notices, and one ONNX model |
+| Source and frozen DPI matrix | Passed at 100/150/200%: 1920x1080, 1280x720, and 960x540 logical windows; at 200%, five tab hints use 379 of 384 px and all critical semantic names are present |
+| Unsigned installer candidate | Built from the `0fbe669` release manifest with Inno Setup 7.0.2; 275,436,774 bytes; signing status `unsigned-not-authorized` |
 | Clean-`main` Inno installed lifecycle baseline | Passed from `0087434`: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | Post-fix installed layout | `c808c9f` installer rebuilt; operator confirmed the five readable workspace tabs display normally after upgrade | Passed |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
@@ -117,12 +120,12 @@ Phases 5–8 have passed their implemented acceptance gates and merged to `main`
 
 ## In progress
 
-- Final v1 operational acceptance remains pending pristine no-Python Windows 10/11 and manual Narrator/DPI release-candidate runs, plus explicit authorization for signing/publication.
+- Final v1 operational acceptance remains pending pristine no-Python Windows 10/11 and manual physical-display, keyboard-only, and Narrator release-candidate runs, plus explicit authorization for signing/publication.
 
 ## Known issues / blockers
 
-- A pristine Windows 10 and Windows 11 x64 environment with no Python is not available in the current workspace; the exact installer matrix and GitHub workflow are implemented but cannot be represented as run on those two client VMs.
-- Manual Narrator and 100/150/200% display-scale acceptance remains pending.
+- The current host is Windows 10 Home build 19045 and has no Windows Sandbox, Hyper-V, VirtualBox, VMware, Vagrant, QEMU, or existing VM configuration. The exact installer matrix and GitHub workflow are implemented, but pristine Windows 10/11 client runs cannot be represented as complete.
+- Automated source/frozen geometry passed at 100/150/200%; manual physical-display, full keyboard-only, and Narrator acceptance remains pending.
 - Code signing and public release/hash publication have not been authorized; locally built candidates are explicitly unsigned and remain under `work/`.
 - MuseScore is not installed on this machine, so external release-MuseScore round-trip acceptance remains pending even though availability gating is tested.
 - The fallback preview is intentionally a timing-review pulse instrument, not production orchestration. A FluidSynth/SoundFont adapter remains optional pending explicit license and redistribution review.
@@ -131,8 +134,8 @@ Phases 5–8 have passed their implemented acceptance gates and merged to `main`
 
 ## Next recommended task
 
-Run the pristine no-Python Windows 10/11 and manual accessibility release-candidate matrix. Only after those gates pass, request explicit authorization for signing and publication.
+Run the pristine no-Python Windows 10/11 and manual physical-display/Narrator release-candidate matrix. Only after those gates pass, request explicit authorization for signing and publication.
 
 ## Last updated date
 
-2026-07-21
+2026-07-22
