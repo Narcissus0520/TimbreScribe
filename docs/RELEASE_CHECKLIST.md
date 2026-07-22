@@ -40,8 +40,9 @@
 
 ## Authorization and publication
 
-- [ ] User explicitly authorizes code signing, certificate use, release creation, public hashes, and
-      any upload destination. Until then artifacts remain labeled unsigned release candidates.
+- [x] User explicitly authorized code signing, certificate use, a public GitHub Release, and public
+      hashes on 2026-07-22. The authorization does not substitute for a trusted signing credential or
+      the signed-candidate Win10/Win11 acceptance records.
 - [ ] Sign approved executables/installer, verify signatures, regenerate final hashes/manifests as
       required, and rerun installed smoke after signing.
 - [ ] Publish release notes, user guide, troubleshooting, model limitations/licenses, hashes, and

@@ -3,7 +3,9 @@ param(
     [string]$BundleDirectory,
     [string]$OutputDirectory,
     [string]$IsccExecutable,
-    [string]$AppVersion = "0.9.0"
+    [string]$AppVersion = "0.9.0",
+    [ValidateSet("unsigned-release-candidate", "bundle-authenticode-installer-unsigned")]
+    [string]$SigningStatus = "unsigned-release-candidate"
 )
 
 $ErrorActionPreference = "Stop"
@@ -56,7 +58,7 @@ $metadata = [ordered]@{
     installer_size = (Get-Item -LiteralPath $installer).Length
     inno_setup_version = $innoVersion
     release_manifest_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseManifest).Hash.ToLowerInvariant()
-    signing_status = "unsigned-not-authorized"
+    signing_status = $SigningStatus
     build_command = "ISCC.exe /DSourceDir=<onedir> /DOutputDir=<artifacts> /DAppVersion=$AppVersion packaging/windows/TimbreScribe.iss"
 }
 $metadataPath = Join-Path $output "installer-manifest.json"

@@ -6,6 +6,13 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Added
 
+- Fail-closed Windows Authenticode tooling that selects an explicit certificate thumbprint, signs
+  only TimbreScribe first-party executables and installer, requires SHA-256 plus an RFC 3161
+  timestamp, verifies the signer, and records privacy-safe signing evidence.
+- A signed-release finalizer that revalidates raw clean-client records, exact signed-candidate
+  binding, bundle/ZIP manifests, installer provenance, and public SHA-256 assets before publication.
+- Versioned signing/publication guidance and prerelease notes for the authorized `v0.9.0` GitHub
+  publication path.
 - Versioned, privacy-minimized Windows client acceptance records with candidate hash binding, clean-toolchain detection, explicit operator affirmation, and strict Win10/Win11 plus physical-display matrix aggregation.
 - Packaged Windows UI Automation acceptance that activates all twelve workspace tabs, verifies keyboard focus/selection support, and records ten screen-reader semantic names as retained JSON release evidence.
 - Opt-in Phase 7 score assistant with a two-method provider port, local loopback llama.cpp lifecycle, generic OpenAI-compatible HTTPS BYOK adapter, and OS credential storage.
