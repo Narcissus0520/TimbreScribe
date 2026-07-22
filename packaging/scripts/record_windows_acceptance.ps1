@@ -223,6 +223,24 @@ function Get-DevelopmentEnvironmentVariableNames {
     )
 }
 
+function Get-Sha256 {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    $algorithm = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = $algorithm.ComputeHash($stream)
+        return ([System.BitConverter]::ToString($digest)).Replace("-", "").ToLowerInvariant()
+    }
+    finally {
+        $algorithm.Dispose()
+        $stream.Dispose()
+    }
+}
+
 function Write-AtomicUtf8Json {
     param(
         [Parameter(Mandatory = $true)]
@@ -268,7 +286,7 @@ if ([int]$manifest.schema_version -ne 1) {
     throw "Unsupported installer manifest schema."
 }
 $installerItem = Get-Item -LiteralPath $installerPath
-$installerHash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$installerHash = Get-Sha256 -Path $installerPath
 if ($installerItem.Name -ne [string]$manifest.installer) {
     throw "Installer name does not match installer-manifest.json."
 }

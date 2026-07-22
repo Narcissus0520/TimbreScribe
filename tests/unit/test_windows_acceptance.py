@@ -238,6 +238,7 @@ def test_powershell_recorder_parses_and_emits_redacted_incomplete_evidence(
     root = Path(__file__).resolve().parents[2]
     script = root / "packaging/scripts/record_windows_acceptance.ps1"
     assert all(byte < 128 for byte in script.read_bytes())
+    assert b"Get-FileHash" not in script.read_bytes()
     installer = tmp_path / "TimbreScribe-0.9.0-windows-x64-setup.exe"
     installer.write_bytes(b"test installer")
     manifest = tmp_path / "installer-manifest.json"
