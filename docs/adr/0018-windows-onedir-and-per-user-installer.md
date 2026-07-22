@@ -1,6 +1,6 @@
 # ADR 0018: Verified Windows onedir and per-user installer
 
-- Status: Accepted
+- Status: Accepted; final-publication clause superseded by ADR 0021 for the current project scope
 - Date: 2026-07-21
 
 ## Context
@@ -52,5 +52,6 @@ models, cache, and logs. Silent uninstall preserves all application data.
 The onedir/installer is large because Qt WebEngine and CPU inference libraries are explicit files,
 but it is inspectable, hashable, and independent of system Python. A release candidate can be
 smoke-tested through the exact installed executables. Qt, FFmpeg, and Python runtime notices are
-visible in the About dialog and bundle. Final v1 publication still requires the clean Windows
-10/11 matrix, authorized signing/hash publication, and closure of all P0/P1 defects.
+visible in the About dialog and bundle. The current scope stops at a private unsigned candidate under
+ADR 0021; any future public v1 scope must be explicitly reopened and re-evaluate clean Windows 10/11,
+publication, integrity, and P0/P1 gates.

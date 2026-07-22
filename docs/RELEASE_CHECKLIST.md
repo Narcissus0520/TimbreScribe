@@ -1,5 +1,8 @@
 # Windows Release Checklist
 
+Current scope note: under ADR 0021 this checklist validates a private unsigned candidate only. Code
+signing, public tags, GitHub Releases, and public asset/hash publication are not planned.
+
 ## Source and quality
 
 - [ ] Milestone branches are merged in order; real MuScriptor gate is either passed or explicitly
@@ -40,10 +43,9 @@
 
 ## Authorization and publication
 
-- [x] User explicitly authorized code signing, certificate use, a public GitHub Release, and public
-      hashes on 2026-07-22. The authorization does not substitute for a trusted signing credential or
-      the signed-candidate Win10/Win11 acceptance records.
-- [ ] Sign approved executables/installer, verify signatures, regenerate final hashes/manifests as
-      required, and rerun installed smoke after signing.
-- [ ] Publish release notes, user guide, troubleshooting, model limitations/licenses, hashes, and
-      upgrade/uninstall behavior. Preserve exact source corresponding to distributed components.
+- [x] User explicitly selected no code signing and no public release on 2026-07-22; ADR 0021 records
+      the replacement of the earlier authorization.
+- [x] No public version tag or GitHub Release exists, and the current workflow artifact remains a
+      private, short-retention, explicitly unsigned candidate.
+- [ ] If this scope is reopened later, obtain fresh explicit authorization and re-evaluate signing,
+      final candidate evidence, public hashes/assets, release notes, and download verification.

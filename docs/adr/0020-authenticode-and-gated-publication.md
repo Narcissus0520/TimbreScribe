@@ -1,6 +1,6 @@
 # ADR 0020: Authenticode signing and fail-closed public release staging
 
-- Status: Accepted
+- Status: Superseded by ADR 0021 for the current project scope
 - Date: 2026-07-22
 
 ## Context

@@ -161,12 +161,10 @@ The focused protocol/PowerShell compatibility tests are:
 uv run pytest tests/unit/test_windows_acceptance.py --no-cov
 ```
 
-After authorization, Authenticode signing remains a separate candidate-changing operation. Follow
-`SIGNING_AND_PUBLICATION.md`; run `sign_windows_artifacts.ps1` only with the explicit first-party
-allowlist and rerun clean Win10/Win11 acceptance against the signed installer. Before publication,
-`finalize_windows_release.py` independently validates signatures, ZIP/manifests, raw operator
-records, exact candidate hashes, and the generated public checksum set. Its focused model-free tests
-are:
+The Authenticode and public-staging implementation is dormant under ADR 0021 and is not part of the
+current private unsigned-candidate acceptance. Its focused model-free regression tests remain in the
+default suite so a future explicitly reopened scope cannot silently weaken the first-party allowlist,
+signature, ZIP/manifest, raw-record, exact-candidate, or public-checksum validation:
 
 ```powershell
 uv run pytest tests/unit/test_windows_release_signing.py --no-cov
