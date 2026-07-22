@@ -26,6 +26,7 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 - Final pre-UIA Windows RC evidence merged by PR #15 as `af92dd386fbdecf950bcd8cadf2b102a9f26000f`.
 - Packaged Windows UI Automation acceptance merged by PR #16 as `6507eaa475ed1fbf3244ed7192581646d7740f13`.
 - Native Qt platform isolation for UI Automation merged by PR #17 as `d02daa25fafa28869637d35e888d2006445169e1`.
+- Versioned Windows client operator evidence merged by PR #19 as `760e41178c11b122f328fda7fb3cf68bd0e308b8`.
 
 ## Completed in Phase 8
 
@@ -117,8 +118,8 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 | Packaged Windows UI Automation | Passed locally on Windows 10 build 19045: 221 descendants, 210 unique names, 12/12 focusable/selectable tabs, and 10/10 required semantic names; also passed on the frozen GitHub RC |
 | Windows client evidence protocol | Passed: 10 focused positive/negative/privacy/PowerShell/workflow-retention tests; strict Mypy passes for the validator, Windows PowerShell 5.1 parser reports zero errors, and the recorder is ASCII-only |
 | Current-host negative acceptance probe | Correctly failed: Windows 10 client build 19045 has Python/Git/Qt development tools, no manual results, no display results, and no Windows 11 peer record; aggregate validator returned exit 1 and `passed: false` |
-| GitHub Windows RC workflow | Passed from merged `main` `d02daa2` in 12m48s: clean onedir/ZIP, 6 packaged tests, retained three-scale DPI and UIA JSON, installer, temporary install/upgrade/association/uninstall preservation, and Node.js 24 artifact upload |
-| GitHub unsigned RC artifact | `TimbreScribe-0.9.0-windows-x64-unsigned`, 721,445,165 bytes, digest `sha256:7574e559d61966e28e264963eac89c9e996fcff76d23a2c75a26ffb41b304de0`, private workflow artifact retained through 2026-08-05; no GitHub Release or public hashes were created |
+| GitHub Windows RC workflow | Passed from merged `main` `760e411` in 13m59s: clean onedir/ZIP, 6 packaged tests, retained three-scale DPI/UIA JSON and the complete clean-client acceptance kit, installer, temporary install/upgrade/association/uninstall preservation, and Node.js 24 artifact upload |
+| GitHub unsigned RC artifact | `TimbreScribe-0.9.0-windows-x64-unsigned`, artifact ID `8517126876`, 721,449,979 bytes, digest `sha256:2924de2e259ba99ef3fb381b22a8a35a9764b74ec6ffe517515ae9ab265187c4`, private workflow artifact retained through 2026-08-05; no GitHub Release or public hashes were created |
 | Clean-`main` Inno installed lifecycle baseline | Passed from `0087434`: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | Post-fix installed layout | `c808c9f` installer rebuilt; operator confirmed the five readable workspace tabs display normally after upgrade | Passed |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
