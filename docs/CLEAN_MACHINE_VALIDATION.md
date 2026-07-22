@@ -19,8 +19,8 @@ Before declaring v1, create a snapshot with no Python/uv/Git/FFmpeg/Qt, copy onl
 published hash, run the script/manual workflow, reboot between install and upgrade when practical,
 and record OS build, artifact hashes, screenshots/logs, and defect links. Missing MuScriptor,
 assistant model, MuseScore, and network access must not block Mock/edit/project/export workflows.
-No P0/P1 defect may remain open. Release signing and public hash publication require separate user
-authorization.
+No P0/P1 defect may remain open. Under ADR 0021 the current candidate stays private and unsigned;
+do not create a public tag, Release, or public hash page.
 
 ## Versioned operator evidence
 

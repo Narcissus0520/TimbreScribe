@@ -4,11 +4,11 @@
 
 Phase 8 — Windows Release Hardening (`v0.9.0`), implementation, GitHub CI, clean artifact, automated high-DPI/UI Automation matrices, and installed-lifecycle acceptance complete.
 
-Phases 5–8 have passed their implemented acceptance gates. Final v1 still retains pristine no-Python Windows 10/11 and manual physical-display/Narrator review for the exact signed candidate. Signing and GitHub publication are authorized, but no usable certificate is configured.
+Phases 5–8 have passed their implemented acceptance gates. Final internal acceptance still retains pristine no-Python Windows 10/11 and manual physical-display/Narrator review for the exact unsigned candidate. Code signing and public publication are explicitly outside the current scope under ADR 0021.
 
 ## Current application version
 
-`0.9.0` (unsigned release candidate, unreleased; authorized target is a signed GitHub prerelease).
+`0.9.0` (private unsigned release candidate; no public release or tag is planned).
 
 ## Merged baseline
 
@@ -41,7 +41,7 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 - Added independent-process 1920x1080 layout acceptance at 100%, 150%, and 200% for source and frozen executables; it checks viewport fit, dock geometry, complete workspace labels, scrolling, and critical semantic names.
 - Added packaged Windows UI Automation acceptance that activates all 12 workspace tabs, verifies focus and selection support, requires 10 stable screen-reader semantic names, and retains redacted JSON evidence.
 - Added versioned, candidate-bound Windows client operator evidence: a Python-free PowerShell recorder detects client/architecture/development-toolchain facts without PII, and a strict repository validator requires clean Win10/Win11 hosts, affirmed manual checks, the complete two-display/three-scale matrix, and zero P0/P1 defects.
-- Added user guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADRs 0018–0020.
+- Added user guide, troubleshooting, accessibility/DPI review, clean-machine procedure, release checklist, release benchmark, Windows release-candidate workflow, and ADRs 0018–0021.
 
 ## Phase 8 acceptance matrix
 
@@ -118,7 +118,7 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 | Unsigned installer candidate | Built from the `0fbe669` release manifest with Inno Setup 7.0.2; 275,436,774 bytes; signing status `unsigned-not-authorized` |
 | Packaged Windows UI Automation | Passed locally on Windows 10 build 19045: 221 descendants, 210 unique names, 12/12 focusable/selectable tabs, and 10/10 required semantic names; also passed on the frozen GitHub RC |
 | Windows client evidence protocol | Passed: 10 focused positive/negative/privacy/PowerShell/workflow-retention tests; strict Mypy passes for the validator, Windows PowerShell 5.1 parser reports zero errors, and the recorder is ASCII-only |
-| Signed-release publication gate | Passed: 5 focused positive/tamper/candidate-binding/timestamp/allowlist tests; exact certificate, signed-file, ZIP, manifest, acceptance-record, and public-hash binding is fail-closed |
+| Dormant signed-release tooling | Passed: 5 focused positive/tamper/candidate-binding/timestamp/allowlist tests; retained for a future explicitly reopened scope and not required by the private unsigned candidate |
 | Current-host negative acceptance probe | Correctly failed: Windows 10 client build 19045 has Python/Git/Qt development tools, no manual results, no display results, and no Windows 11 peer record; aggregate validator returned exit 1 and `passed: false` |
 | GitHub Windows RC workflow | Passed from merged `main` `0ba3fed` in 18m19s: clean onedir/ZIP, 6 packaged tests, retained three-scale DPI/UIA JSON and the complete clean-client acceptance kit, installer, temporary install/upgrade/association/uninstall preservation, and Node.js 24 artifact upload |
 | GitHub unsigned RC artifact | `TimbreScribe-0.9.0-windows-x64-unsigned`, artifact ID `8528590660`, 721,439,091 bytes, digest `sha256:2e975dc1bc0f80c9224263b0ee3d3d28499b0d55cbe9cd7a9e6fd50e74249d0c`, private workflow artifact retained through 2026-08-05T11:58Z; no GitHub Release or public hashes were created |
@@ -135,14 +135,13 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 
 ## In progress
 
-- Signed-release hardening is in progress. The fail-closed Authenticode signer and final public-asset validator bind first-party signatures, manifests, ZIP contents, the signed installer, and raw Win10/Win11 operator records before publication.
-- Final v1 operational acceptance remains pending operator records from pristine no-Python Windows 10/11 and the manual physical-display, keyboard-only, and Narrator matrix for the exact signed installer.
+- Final internal operational acceptance remains pending operator records from pristine no-Python Windows 10/11 and the manual physical-display, keyboard-only, and Narrator matrix for the exact unsigned installer.
 
 ## Known issues / blockers
 
 - The current host is Windows 10 Home build 19045 and has no Windows Sandbox, Hyper-V, VirtualBox, VMware, Vagrant, QEMU, or existing VM configuration. Its acceptance probe honestly fails clean-toolchain requirements because Python/Git/Qt tools are installed. The exact recorder/validator and GitHub workflow are implemented, but pristine Windows 10/11 client records cannot be represented as complete.
 - Automated source/frozen geometry passed at 100/150/200%; manual physical-display, full keyboard-only, and Narrator acceptance remains pending.
-- The user authorized code signing, certificate use, a public GitHub Release, and public hashes on 2026-07-22. No code-signing certificate/private key, Windows certificate-store entry, signing service, or repository signing secret is currently available, so no trustworthy Authenticode signature can yet be produced. A GitHub or Hugging Face token is not a code-signing credential.
+- On 2026-07-22 the user explicitly replaced the earlier signing/publication authorization with a private unsigned-candidate scope. No certificate, signing service, public tag, GitHub Release, or public asset publication is required or planned. The hardened signing tools remain dormant under ADR 0021.
 - MuseScore is not installed on this machine, so external release-MuseScore round-trip acceptance remains pending even though availability gating is tested.
 - The fallback preview is intentionally a timing-review pulse instrument, not production orchestration. A FluidSynth/SoundFont adapter remains optional pending explicit license and redistribution review.
 - Tempo, key, and chord analysis are reviewable suggestions rather than authoritative automatic analysis.
@@ -150,7 +149,7 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 
 ## Next recommended task
 
-Obtain a publicly trusted Authenticode certificate and expose it through the Windows certificate store, build and sign the final candidate with `docs/SIGNING_AND_PUBLICATION.md`, then run that exact signed installer on pristine no-Python Windows 10/11 clients. Once both records aggregate to `passed: true`, publish the already-authorized GitHub prerelease and verify its downloaded assets.
+Download the private unsigned candidate artifact onto pristine no-Python Windows 10/11 clients, complete and affirm the physical-display/keyboard-only/Narrator workflows for that exact installer, and return the two privacy-minimized JSON records for aggregation. Do not sign or publish the candidate.
 
 ## Last updated date
 

@@ -1,5 +1,10 @@
 # Windows signing and publication
 
+> **Dormant optional procedure:** ADR 0021 supersedes this workflow for the current project scope.
+> Do not obtain a certificate, sign artifacts, create a tag, or publish a Release unless a future
+> explicit user instruction reopens the scope. This document is retained only as tested technical
+> reference.
+
 TimbreScribe uses Authenticode for its two first-party executables and the Inno Setup installer.
 The FFmpeg, Qt, Python, and other third-party binaries retain their upstream signatures and must not
 be re-signed as TimbreScribe. GitHub credentials and Hugging Face tokens are not code-signing
