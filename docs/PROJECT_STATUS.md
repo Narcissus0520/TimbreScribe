@@ -27,6 +27,7 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 - Packaged Windows UI Automation acceptance merged by PR #16 as `6507eaa475ed1fbf3244ed7192581646d7740f13`.
 - Native Qt platform isolation for UI Automation merged by PR #17 as `d02daa25fafa28869637d35e888d2006445169e1`.
 - Versioned Windows client operator evidence merged by PR #19 as `760e41178c11b122f328fda7fb3cf68bd0e308b8`.
+- Fail-closed signed Windows publication tooling merged by PR #21 as `0ba3fed92c0f88a7949c6a72449ccf63730032e7`.
 
 ## Completed in Phase 8
 
@@ -108,18 +109,19 @@ Phases 5–8 have passed their implemented acceptance gates. Final v1 still reta
 | Command | Result |
 |---|---|
 | `uv lock --check` | Passed: 147 packages resolved |
-| `ruff format --check .` | Passed: 194 files formatted |
+| `ruff format --check .` | Passed: 196 files formatted |
 | `ruff check .` | Passed |
-| `mypy src/timbrescribe packaging/scripts/validate_windows_acceptance.py` | Passed: 133 source files, strict mode |
-| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 238 tests, 8 deselected, 77.30% branch-aware coverage |
+| `mypy src/timbrescribe packaging/scripts/validate_windows_acceptance.py packaging/scripts/finalize_windows_release.py` | Passed: 134 source files, strict mode |
+| `pytest -m "not model and not packaging"` with verified FFmpeg | Passed: 243 tests, 8 deselected, 77.30% branch-aware coverage |
 | Local packaged artifact suite | Passed from `0fbe669`: 6 tests against frozen GUI/Workers, three DPI factors, 6,582 artifact-wide hashes, notices, and one ONNX model |
 | Source and frozen DPI matrix | Passed at 100/150/200%: 1920x1080, 1280x720, and 960x540 logical windows; at 200%, five tab hints use 379 of 384 px and all critical semantic names are present |
 | Unsigned installer candidate | Built from the `0fbe669` release manifest with Inno Setup 7.0.2; 275,436,774 bytes; signing status `unsigned-not-authorized` |
 | Packaged Windows UI Automation | Passed locally on Windows 10 build 19045: 221 descendants, 210 unique names, 12/12 focusable/selectable tabs, and 10/10 required semantic names; also passed on the frozen GitHub RC |
 | Windows client evidence protocol | Passed: 10 focused positive/negative/privacy/PowerShell/workflow-retention tests; strict Mypy passes for the validator, Windows PowerShell 5.1 parser reports zero errors, and the recorder is ASCII-only |
+| Signed-release publication gate | Passed: 5 focused positive/tamper/candidate-binding/timestamp/allowlist tests; exact certificate, signed-file, ZIP, manifest, acceptance-record, and public-hash binding is fail-closed |
 | Current-host negative acceptance probe | Correctly failed: Windows 10 client build 19045 has Python/Git/Qt development tools, no manual results, no display results, and no Windows 11 peer record; aggregate validator returned exit 1 and `passed: false` |
-| GitHub Windows RC workflow | Passed from merged `main` `760e411` in 13m59s: clean onedir/ZIP, 6 packaged tests, retained three-scale DPI/UIA JSON and the complete clean-client acceptance kit, installer, temporary install/upgrade/association/uninstall preservation, and Node.js 24 artifact upload |
-| GitHub unsigned RC artifact | `TimbreScribe-0.9.0-windows-x64-unsigned`, artifact ID `8517126876`, 721,449,979 bytes, digest `sha256:2924de2e259ba99ef3fb381b22a8a35a9764b74ec6ffe517515ae9ab265187c4`, private workflow artifact retained through 2026-08-05; no GitHub Release or public hashes were created |
+| GitHub Windows RC workflow | Passed from merged `main` `0ba3fed` in 18m19s: clean onedir/ZIP, 6 packaged tests, retained three-scale DPI/UIA JSON and the complete clean-client acceptance kit, installer, temporary install/upgrade/association/uninstall preservation, and Node.js 24 artifact upload |
+| GitHub unsigned RC artifact | `TimbreScribe-0.9.0-windows-x64-unsigned`, artifact ID `8528590660`, 721,439,091 bytes, digest `sha256:2e975dc1bc0f80c9224263b0ee3d3d28499b0d55cbe9cd7a9e6fd50e74249d0c`, private workflow artifact retained through 2026-08-05T11:58Z; no GitHub Release or public hashes were created |
 | Clean-`main` Inno installed lifecycle baseline | Passed from `0087434`: install, GUI smoke, association, in-place upgrade, setting/project preservation, uninstall/association cleanup |
 | Post-fix installed layout | `c808c9f` installer rebuilt; operator confirmed the five readable workspace tabs display normally after upgrade | Passed |
 | W3C MusicXML 4.0 XSD | Passed: pitched, transposing, percussion, harmony, and triplet fixtures |
