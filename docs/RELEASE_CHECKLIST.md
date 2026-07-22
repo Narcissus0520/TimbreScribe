@@ -6,6 +6,8 @@
       excluded from the release claim without weakening other functionality.
 - [ ] `uv lock --check`, Ruff format/check, strict Mypy, full model-free pytest coverage, W3C XSD,
       dependency audit, and benchmark regression gates pass at the release commit.
+- [ ] Independent-process 1920x1080 layout smoke passes at 100%, 150%, and 200% for source and
+      packaged executables; retain the JSON geometry evidence with the candidate.
 - [ ] Basic Pitch exact wheel/model verification and packaged Worker preload pass.
 - [ ] No P0/P1 bugs remain; known lower-severity issues have owner/reproduction/workaround.
 

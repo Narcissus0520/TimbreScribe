@@ -56,6 +56,7 @@ All notable changes to TimbreScribe will be documented in this file. The project
 
 ### Fixed
 
+- Kept the complete docked workspace, semantic names, diagnostics, and all five readable workspace tabs reachable in an automated 1920×1080 matrix at 100%, 150%, and 200% scaling.
 - Replaced the compressed left-dock `M…`/`B…` labels with readable top-aligned workspace tabs, full hover descriptions, and a width regression gate.
 - Replaced per-measure full-score scans with one-pass span indexes and cached score order/count, reducing the measured 10,000-note notation path from 22.240 seconds to 1.305 seconds on the selected Phase 6 baseline machine.
 - Preserved cancellation semantics when Qt reports a forced worker termination as a process error.

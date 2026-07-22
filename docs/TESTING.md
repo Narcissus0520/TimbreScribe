@@ -89,6 +89,18 @@ A manual local provider smoke requires a separately installed `llama-server.exe`
 
 ## Phase 8 packaging and installed smoke
 
+The default model-free suite includes a fresh-process 1920×1080 layout matrix at 100%, 150%, and
+200% Qt scaling. Run it directly while iterating on the shell:
+
+```powershell
+uv run pytest -q --no-cov tests/gui/test_dpi_smoke.py
+```
+
+Each process reports the physical/logical viewport, effective scale, window and dock geometry,
+complete workspace labels, scrolling, and critical accessible-name coverage. This does not replace
+the physical-display, keyboard-only, and Narrator release review. The Windows release workflow
+retains the three packaged JSON reports in the unsigned candidate artifact.
+
 Build from the locked release environment and verified FFmpeg directory:
 
 ```powershell
@@ -100,7 +112,7 @@ uv run pytest -m packaging --no-cov
 
 The packaging suite recomputes every recorded file hash, requires complete top-level notices,
 allows exactly one Basic Pitch `nmp.onnx` of the approved hash, rejects MuScriptor/GGUF weights,
-starts the windowed executable offscreen, completes a Mock protocol-v1 job through the packaged
+starts the windowed executable offscreen at 100%, 150%, and 200% scaling, completes a Mock protocol-v1 job through the packaged
 Worker and validates its artifact, and preloads the real Basic Pitch ONNX runtime/model. It never
 uses source `python -m` for those process checks.
 
@@ -122,7 +134,7 @@ still requires the pristine Windows 10/11 and accessibility matrix in `CLEAN_MAC
 - Unit/property: source-media invariants, cache keys/cleanup, waveform/dual-preview playback/loop state, exact score-time conversion, raw/settings/provenance validation, Basic Pitch and MuScriptor normalization/error boundaries, exact quantization and triplets, continuity-aware hand/voice allocation, percussion mapping, harmony suggestions, rhythm profiles, non-mutating range diagnostics, multi-part grouping/projection, editable instrument/chord mapping, assistant request minimization/schema/scope/command mapping/diffs, command execute/undo/redo, stale-version rejection, project migrations, polyphonic measure closure, transposition round trips, MusicXML/MXL/MIDI structure and safety, confidence views, and atomic exports. Hypothesis generates timing/polyphony and instrument-transposition cases.
 - Contract: protocol v1 parsing, Basic Pitch and MuScriptor request settings, gated terms/rights/local-safetensors validation, unknown-field compatibility, incompatible-version errors, stdout JSONL discipline, progress, warning, result, failure, and cancellation. No credential is a protocol field.
 - Integration: exact FFmpeg discovery, generated media probe/decode/cache/cancellation, real Mock subprocess, model-free persistent Basic Pitch protocol stub, MuScriptor process startup without optional imports, result loading, pinned Verovio 6.2.1 multi-page rendering, secure `.timbrescribe` round trips, and SVG/PNG/vector-PDF export.
-- GUI: offscreen media responsiveness, Mock paths, fully functional model/assistant-absent startup, Basic Pitch persistent-client reuse, confidence-filtered raw roll, total/part navigation, part-profile remapping and part exports, keyboard/multi-selection editing, inspector commands, undo/redo, save/reopen, stale-result rejection, unsaved-close prompts, reviewed notation controls, Verovio page state, professional exports, raw MIDI export, assistant privacy/diff/confirmation/no-mutation workflows, and forced-cancel no-promotion behavior using `pytest-qt`.
+- GUI: independent-process 100/150/200% 1080p layout acceptance, offscreen media responsiveness, Mock paths, fully functional model/assistant-absent startup, Basic Pitch persistent-client reuse, confidence-filtered raw roll, total/part navigation, part-profile remapping and part exports, keyboard/multi-selection editing, inspector commands, undo/redo, save/reopen, stale-result rejection, unsaved-close prompts, reviewed notation controls, Verovio page state, professional exports, raw MIDI export, assistant privacy/diff/confirmation/no-mutation workflows, and forced-cancel no-promotion behavior using `pytest-qt`.
 - Model (opt-in): exact Basic Pitch/ONNX availability, real CPU inference, persistent model reuse, provenance, and Qt responsiveness; separately gated exact MuScriptor Small inference on explicitly approved local multi-instrument material.
 - Packaging (opt-in): artifact inventory/file hashes, model allowlist, frozen GUI initialization, frozen Mock JSONL/result, frozen Basic Pitch preload, and installer/association/upgrade/uninstall preservation.
 

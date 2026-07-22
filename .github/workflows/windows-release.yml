@@ -50,6 +50,22 @@ jobs:
           $env:TIMBRESCRIBE_PACKAGED_APP = Join-Path $PWD "work\release\dist\TimbreScribe"
           uv run pytest -m packaging --no-cov
 
+      - name: Retain packaged high-DPI geometry evidence
+        shell: pwsh
+        run: |
+          $application = Join-Path $PWD "work\release\dist\TimbreScribe\TimbreScribe.exe"
+          $evidence = Join-Path $PWD "work\release\artifacts\dpi-smoke"
+          New-Item -ItemType Directory -Path $evidence -Force | Out-Null
+          foreach ($scale in @("1", "1.5", "2")) {
+            $env:QT_SCALE_FACTOR = $scale
+            $label = $scale.Replace(".", "_")
+            $report = Join-Path $evidence "scale-$label.json"
+            $process = Start-Process -FilePath $application -ArgumentList @(
+              "--smoke-test", "--report", $report, "--physical-size", "1920x1080"
+            ) -Wait -PassThru -WindowStyle Hidden
+            if ($process.ExitCode -ne 0) { throw "Packaged DPI smoke failed at scale $scale." }
+          }
+
       - name: Install pinned Inno Setup compiler
         shell: pwsh
         run: winget install --id JRSoftware.InnoSetup.7 --version 7.0.2 --exact --silent --scope user --accept-package-agreements --accept-source-agreements --disable-interactivity
@@ -70,6 +86,7 @@ jobs:
             work/release/artifacts/TimbreScribe-0.9.0-windows-x64-onedir.zip
             work/release/artifacts/TimbreScribe-0.9.0-windows-x64-setup.exe
             work/release/artifacts/installer-manifest.json
+            work/release/artifacts/dpi-smoke/*.json
             work/release/dist/TimbreScribe/manifests/release-manifest.json
           if-no-files-found: error
           retention-days: 14

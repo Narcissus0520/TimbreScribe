@@ -78,19 +78,40 @@ def test_bundle_structure_notices_models_and_hash_manifest() -> None:
         assert not (bundle / "_internal" / development_package).exists()
 
 
-def test_gui_offscreen_smoke(tmp_path: Path) -> None:
+@pytest.mark.parametrize("scale_factor", ["1", "1.5", "2"])
+def test_gui_offscreen_smoke(tmp_path: Path, scale_factor: str) -> None:
     bundle = _bundle()
-    report = tmp_path / "gui-smoke.json"
+    report = tmp_path / f"gui-smoke-{scale_factor}.json"
+    environment = os.environ.copy()
+    environment["QT_QPA_PLATFORM"] = "offscreen"
+    environment["QT_SCALE_FACTOR"] = scale_factor
     completed = subprocess.run(
-        [str(bundle / "TimbreScribe.exe"), "--smoke-test", "--report", str(report)],
+        [
+            str(bundle / "TimbreScribe.exe"),
+            "--smoke-test",
+            "--report",
+            str(report),
+            "--physical-size",
+            "1920x1080",
+        ],
         check=False,
         capture_output=True,
+        env=environment,
         timeout=90,
     )
     assert completed.returncode == 0, completed.stderr.decode(errors="replace")
     result = json.loads(report.read_text(encoding="utf-8"))
     assert result["assistant_default_off"] is True
     assert result["mock_action_enabled"] is True
+    layout = result["layout"]
+    assert layout["scale_factor"] == pytest.approx(float(scale_factor))
+    assert layout["physical_viewport"] == {"width": 1920, "height": 1080}
+    assert layout["fits_viewport"] is True
+    assert layout["dock_geometry_usable"] is True
+    assert layout["workspace_tabs_fit"] is True
+    assert layout["scrollable_workspaces"] is True
+    assert layout["accessible_names_present"] is True
+    assert layout["usable"] is True
 
 
 def test_packaged_mock_jsonl_round_trip(tmp_path: Path) -> None:
