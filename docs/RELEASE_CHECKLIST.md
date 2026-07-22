@@ -33,6 +33,9 @@
       settings/projects preservation, uninstall.
 - [ ] Repeat on Windows 11 x64; verify missing optional models/MuseScore/network do not block core.
 - [ ] Keyboard-only, Narrator, light/dark, and 100/150/200% DPI matrix is recorded.
+- [ ] Versioned operator records bind the same installer SHA-256, prove clean Windows 10/11 client
+      environments, contain explicit affirmation and zero P0/P1 defects, and aggregate to
+      `passed: true` with `validate_windows_acceptance.py`.
 - [ ] Crash record and user-reviewed redacted diagnostic ZIP work; cache cleanup remains scoped.
 
 ## Authorization and publication

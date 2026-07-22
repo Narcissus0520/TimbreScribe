@@ -96,5 +96,10 @@ jobs:
             work/release/artifacts/dpi-smoke/*.json
             work/release/artifacts/accessibility/*.json
             work/release/dist/TimbreScribe/manifests/release-manifest.json
+            packaging/scripts/record_windows_acceptance.ps1
+            packaging/scripts/validate_windows_acceptance.py
+            packaging/windows/windows-acceptance-answers.example.json
+            docs/CLEAN_MACHINE_VALIDATION.md
+            docs/ACCESSIBILITY_AND_DPI_REVIEW.md
           if-no-files-found: error
           retention-days: 14
